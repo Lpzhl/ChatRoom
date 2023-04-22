@@ -20,7 +20,7 @@
             <Font name="System Bold" size="24.0" />
          </font>
       </Label>
-      <TextField fx:id="username" layoutX="221.0" layoutY="58.0" onAction="#username1" prefHeight="36.0" prefWidth="314.0" promptText="请输入用户名" />
+      <TextField fx:id="nickname" layoutX="221.0" layoutY="58.0" onAction="#nickname1" prefHeight="36.0" prefWidth="314.0" promptText="请输入用户名" />
       <TextField fx:id="Email" layoutX="221.0" layoutY="211.0" onAction="#Email1" prefHeight="36.0" prefWidth="314.0" promptText="请输入邮箱" />
       <Button fx:id="GetEmail" layoutX="406.0" layoutY="265.0" mnemonicParsing="false" onAction="#GetEmail1" prefHeight="36.0" prefWidth="130.0" style="-fx-background-color: #C0C0C0;" text="获取验证码" />
       <Button fx:id="Register" layoutX="222.0" layoutY="316.0" mnemonicParsing="false" onAction="#Register1" prefHeight="36.0" prefWidth="148.0" style="-fx-background-color: #3282F6;" text="注册" />

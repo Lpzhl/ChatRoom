@@ -16,6 +16,7 @@ public class Server {
                 Socket clientSocket = null;
                 try {
                     clientSocket = serverSocket.accept();
+                    System.out.println("客户端"+clientSocket);
                     ServerHandler serverHandler = new ServerHandler(clientSocket);
                     Thread thread = new Thread(serverHandler);
                     thread.start();

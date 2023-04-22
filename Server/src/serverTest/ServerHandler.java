@@ -5,10 +5,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import javafx.util.Pair;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 
 // ServerHandler类实现了Runnable接口，允许在新线程中运行
 public class ServerHandler implements Runnable {
@@ -36,25 +34,32 @@ public class ServerHandler implements Runnable {
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             // 读取客户端发送的请求
             String request = in.readLine();
-            // 将请求分割为请求的各个部分
+            System.out.println("客户端请求信息："+request);
 
             if (request == null) {
                 System.out.println("Client sent an empty request or disconnected");
                 return;
             }
 
+            // 将请求分割为请求的各个部分
             String[] requestParts = request.split(":");
 
             // 根据请求的第一个部分，判断是哪种请求并执行相应操作
             switch (requestParts[0]) {
-                case "register":
+                case "register"://处理注册账号的的请求
                     handleRegister(out, requestParts);
                     break;
-                case "login":
+                case "login"://处理登入的请求
                     handleLogin(out, requestParts);
                     break;
-                case "emailLogin": // 添加处理邮箱登录的 case
+                case "email_verification"://发送验证码请求
+                    handleEmailVerification(out, requestParts);
+                    break;
+                case "emailLogin": // 处理邮箱登录的请求
                     handleEmailLogin(out, requestParts);
+                    break;
+                case"resetPassword"://处理找回密码的请求
+                    handleResetPassword(out,requestParts);
                     break;
                 default:
                     out.println("error");
@@ -88,21 +93,26 @@ public class ServerHandler implements Runnable {
         */
 
     }
+
+
     // 处理注册请求
     private void handleRegister(PrintWriter out, String[] requestParts) {
-        if (requestParts.length != 3) {
+        if (requestParts.length != 5) {
             out.println("error");
             return;
         }
+        String username= requestParts[1];
+        String password= requestParts[2];
+        String email= requestParts[3];
+        String nickname= requestParts[4];
+        System.out.println(email+" "+nickname+" "+password+""+username);
 
-        String username = requestParts[1];
-        String password = requestParts[2];
 
         // 如果用户名已存在，返回"duplicate"，否则注册用户并返回"success"
-        if (dbConnection.userExists(username)) {
+        if (dbConnection.emailExists(email)) {
             out.println("duplicate");
         } else {
-            dbConnection.registerUser(username, password);
+            dbConnection.registerUser(username, password,email,nickname);
             out.println("success");
         }
     }
@@ -125,6 +135,46 @@ public class ServerHandler implements Runnable {
             out.println("fail");
         }
     }
+    //处理发送验证码请求
+    private void handleEmailVerification(PrintWriter out, String[] requestParts) {
+        if (requestParts.length != 2) {
+            out.println("error");
+            return;
+        }
+
+        String email = requestParts[1];
+        String generatedCode = EmailVca.generateRandomCode();
+        EmailVca emailVca = new EmailVca(email, generatedCode);
+
+        // 使用FutureTask代替Task
+        FutureTask<Void> emailTask = new FutureTask<>(emailVca);
+
+        // 创建一个新的线程来执行emailTask
+        Thread emailThread = new Thread(emailTask);
+        emailThread.setDaemon(true);
+        emailThread.start();
+
+        // 等待线程执行完成，以便在发生异常时处理
+        try {
+            emailThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        // 检查是否发生异常
+        try {
+            emailTask.get();
+            out.println(generatedCode);
+        } catch (ExecutionException e) {
+            e.getCause().printStackTrace();
+            out.println("fail");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            out.println("fail");
+        }
+    }
+
+
     // 处理邮箱登录请求的方法
     private void handleEmailLogin(PrintWriter out, String[] requestParts) {
         if (requestParts.length != 2) {
@@ -142,6 +192,33 @@ public class ServerHandler implements Runnable {
             System.out.println("电子邮件不存在,没有绑定账号");
         }
     }
+
+    //处理找回密码请求
+    private void handleResetPassword(PrintWriter out, String[] requestParts) {
+        if (requestParts.length != 3) {
+            out.println("error");
+            System.out.println("请求格式错误!");
+            return;
+        }
+
+        String username = requestParts[1];
+        String newPassword = requestParts[2];
+
+        if (dbConnection.userExists(username)) {
+            if (dbConnection.updateUserPassword(username, newPassword)) {
+                out.println("success");
+                System.out.println("用户"+username+"修改密码成功!");
+            } else {
+                out.println("failure");
+                System.out.println("用户"+username+"修改密码失败!");
+            }
+        } else {
+            out.println("user_not_found");
+            System.out.println("该"+username+"用户未注册！");
+        }
+    }
+
+
 }
 
 

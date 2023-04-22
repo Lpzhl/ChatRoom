@@ -12,7 +12,6 @@ import java.util.Map;
 
 import javafx.util.Pair;
 import Util.EmailUtil;
-import Util.EmailVerificationUtil;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -24,7 +23,6 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
-import static Util.EmailUtil.generateRandomCode;
 
 public class RetrievePasswordController {
 
@@ -83,14 +81,33 @@ public class RetrievePasswordController {
     void Obtainverification1(ActionEvent event) {
         String emailAddress = Retrievepasswordemail.getText();
         if (EmailUtil.isValidEmail(emailAddress)) {
-            generatedCode = generateRandomCode();
-            EmailUtil emailUtil = new EmailUtil(emailAddress, generatedCode);
-            new Thread(emailUtil).start();
-            EmailVerificationUtil.startCountdown(Obtainverification);
+            try (Socket socket = new Socket("127.0.0.1", 6000);
+                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
-            // 添加生成的验证码和过期时间到映射中
-            generatedCodes.put(emailAddress, new Pair<>(generatedCode, LocalDateTime.now().plusMinutes(3)));
-        }else {
+                // 向服务端请求发送验证码
+                out.println("email_verification:" + emailAddress);
+
+                System.out.println("请求发送验证码的qq:"+emailAddress);
+
+                // 从服务端接收响应
+                String response = in.readLine();
+                if (response.length() == 6)  {
+                    generatedCode = response;
+                    // 添加生成的验证码和过期时间到映射中
+                    // 开始倒计时
+                    EmailUtil.startCountdown(Obtainverification);
+                    System.out.println("发送邮件的时间为"+LocalDateTime.now());
+                    System.out.println("过期的时间为"+ LocalDateTime.now().plusMinutes(EmailUtil.CODE_VALIDITY_MINUTES));
+                    generatedCodes.put(emailAddress, new Pair<>(generatedCode, LocalDateTime.now().plusMinutes(3)));
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "错误", "验证码发送失败，请稍后重试");
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("错误");
             alert.setHeaderText(null);
@@ -107,11 +124,11 @@ public class RetrievePasswordController {
     @FXML
     //确认
     void Sure1(ActionEvent event) {
-        String email = Retrievepasswordemail.getText().trim();
-        String username = UsernameID.getText().trim();
-        String newPassword = Resetpassword.getText().trim();
+        String email = Retrievepasswordemail.getText().trim();//邮箱
+        String username = UsernameID.getText().trim();//ID
+        String newPassword = Resetpassword.getText().trim();//新密码
         String confirmPassword = Resetpassword2.getText().trim();
-        String verificationCode = Inputverification.getText().trim();
+        String verificationCode = Inputverification.getText().trim();//验证码
 
         if (email.isEmpty() || username.isEmpty() || newPassword.isEmpty() || confirmPassword.isEmpty() || verificationCode.isEmpty()) {
             showAlert(Alert.AlertType.ERROR, "错误", "所有字段都不能为空");
@@ -129,12 +146,12 @@ public class RetrievePasswordController {
         }
 
         if (EmailUtil.isCodeValid(email, verificationCode, generatedCodes)) {
-            try (Socket socket = new Socket("127.0.0.1", 5000);
+            try (Socket socket = new Socket("127.0.0.1", 6000);
                  PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                  BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
                 // 发送重置密码请求给服务端
-                out.println("resetPassword:" + email + ":" + username + ":" + newPassword + ":" + verificationCode);
+                out.println("resetPassword:" + username + ":" + newPassword);
 
                 // 从服务端接收响应
                 String response = in.readLine();

@@ -1,8 +1,6 @@
 package controller;
 
-import javafx.util.Pair;
 import Util.EmailUtil;
-import Util.EmailVerificationUtil;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -11,7 +9,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
-import javafx.stage.Stage;
+import javafx.scene.image.ImageView;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -22,38 +20,78 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
-import static Util.EmailUtil.generateRandomCode;
+import javafx.stage.Stage;
+import javafx.util.Pair;
+
+import static java.lang.System.out;
 
 public class EmailLoginController {
-    @FXML
-    private TextField Mailboxnumber;
-    @FXML
-    private TextField Verificationcode;
-    @FXML
-    private Button Getverificationcode;
-    @FXML
-    private Button Login;
+
     @FXML
     private Button cancel;
 
+    @FXML
+    private TextField Verificationcode;
+
+    @FXML
+    private Button Getverificationcode;
+
+    @FXML
+    private TextField Mailboxnumber;
+
+    @FXML
+    private Button Login;
+
+    @FXML
+    private ImageView cancel1;
+
+    private String serverGeneratedCode; // 存储从服务器接收到的验证码
+
+    // 添加一个用于存储验证码及其过期时间的映射
     private Map<String, Pair<String, LocalDateTime>> generatedCodes = new HashMap<>();
-    public void Mailboxnumber1(ActionEvent event) {
+
+    @FXML
+    void Mailboxnumber1(ActionEvent event) {
+
     }
 
-    public void Verificationcode1(ActionEvent event) {
+    @FXML
+    void Verificationcode1(ActionEvent event) {
+
     }
 
-    public void Getverificationcode1(ActionEvent event) {
-        String emailAddress = Mailboxnumber.getText();
-        if (EmailUtil.isValidEmail(emailAddress)) {
-            String generatedCode = generateRandomCode();
-            LocalDateTime expirationTime = LocalDateTime.now().plusMinutes(EmailUtil.CODE_VALIDITY_MINUTES);
-            // 将生成的验证码发送到服务器端
-            EmailUtil emailUtil = new EmailUtil(emailAddress, generatedCode);
-            new Thread(emailUtil).start();
-            EmailUtil.startCountdown(Getverificationcode);
+    @FXML
+    void Getverificationcode1(ActionEvent event) {
+        String email = Mailboxnumber.getText();
+        if (EmailUtil.isValidEmail(email)) {
+            try (Socket socket = new Socket("127.0.0.1", 6000);
+                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+                // 向服务端请求发送验证码
+                out.println("email_verification:" + email);
+
+                // 从服务端接收响应
+                String response = in.readLine();
+                if (response.length() == 6) {
+                    serverGeneratedCode = response;
+                    // 添加生成的验证码和过期时间到映射中
+                    System.out.println(serverGeneratedCode);
+                    // 添加生成的验证码和过期时间到映射中
+                    System.out.println("发送邮件的时间为"+LocalDateTime.now());
+                    System.out.println("过期的时间为"+ LocalDateTime.now().plusMinutes(EmailUtil.CODE_VALIDITY_MINUTES));
+                    generatedCodes.put(email, new Pair<>(serverGeneratedCode, LocalDateTime.now().plusMinutes(EmailUtil.CODE_VALIDITY_MINUTES)));
+
+                    // 开始倒计时
+                    EmailUtil.startCountdown(Getverificationcode);
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "错误", "验证码发送失败，请稍后重试");
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         } else {
-            // 显示错误提示，要求用户输入有效的电子邮件地址
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("错误");
             alert.setHeaderText(null);
@@ -62,67 +100,58 @@ public class EmailLoginController {
         }
     }
 
-    public void Login1(ActionEvent event) {
-        String email = Mailboxnumber.getText().trim();
-        String verificationCode = Verificationcode.getText().trim();
+
+    @FXML
+    void Login1(ActionEvent event) {
+        String email = Mailboxnumber.getText();
+        String verificationCode = Verificationcode.getText();
+
+        System.out.println("email: " + email);
+        System.out.println("verificationCode: " + verificationCode);
 
         if (email.isEmpty() || verificationCode.isEmpty()) {
+            System.out.println("Empty fields");
             showAlert(Alert.AlertType.ERROR, "错误", "所有字段都不能为空");
             return;
         }
-
         if (!EmailUtil.isValidEmail(email)) {
+            System.out.println("Invalid email");
             showAlert(Alert.AlertType.ERROR, "错误", "无效的电子邮件地址");
             return;
         }
 
-        System.out.println("generatedCodes is null: " + (generatedCodes == null));
-        System.out.println("generatedCodes.get(email) is null: " + (generatedCodes.get(email) == null));
+        // 检查验证码是否正确
+        System.out.println("Generated codes: " + generatedCodes);
 
-        if (EmailUtil.isCodeValidWithinValidityPeriod(generatedCodes.get(email).getValue())){
-            // 验证成功，执行登录操作
+        if (EmailUtil.isCodeValid(email, verificationCode, generatedCodes)) {
+            // 验证码正确，检查邮箱是否存在于数据库中
             try (Socket socket = new Socket("127.0.0.1", 6000);
                  PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                  BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-                // 检查Socket的状态
-                if (socket.isClosed()) {
-                    System.out.println("Socket is closed before sending request to server");
-                } else {
-                    System.out.println("Socket is open before sending request to server");
-                }
 
-                // 发送登录请求给服务端
                 out.println("emailLogin:" + email);
-                System.out.println("发送请求: emailLogin:" + email);
 
-                // 从服务端接收响应
                 String response = in.readLine();
-                System.out.println("接收到的响应: " + response);
-                if (response.equals("success")) {
-                    System.out.println("登入成功！");
-                    // 切换界面
+                if ("success".equals(response)) {
+                    showAlert(Alert.AlertType.INFORMATION, "成功", "登录成功");
+                    //跳转 聊天室界面
                 } else {
-                    System.out.println("登入失败！");
-                    showAlert(Alert.AlertType.ERROR, "登录失败", "该邮箱未绑定账号!!");
+                    showAlert(Alert.AlertType.ERROR, "错误", "该邮箱未绑定QQ号，登录失败");
                 }
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
         } else {
-            // 验证失败，提示用户验证码无效或已过期
-            showAlert(Alert.AlertType.ERROR, "错误", "验证码无效或已过期，请重新获取");
+            System.out.println("Incorrect code");
+            showAlert(Alert.AlertType.ERROR, "错误", "验证码错误或已过期");
         }
     }
 
-    private void showAlert(Alert.AlertType alertType, String title, String content) {
-        Alert alert = new Alert(alertType);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        alert.showAndWait();
-    }
 
-    public void cancel1(ActionEvent event) {
+
+    @FXML
+    void cancel1(ActionEvent event) {
         try {
             Stage stage = (Stage) cancel.getScene().getWindow();
             stage.close();
@@ -134,5 +163,13 @@ public class EmailLoginController {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void showAlert(Alert.AlertType alertType, String title, String content) {
+        Alert alert = new Alert(alertType);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+        alert.showAndWait();
     }
 }

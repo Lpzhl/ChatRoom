@@ -1,7 +1,7 @@
 package controller;
 
 import Util.EmailUtil;
-import Util.EmailVerificationUtil;
+import Util.SnowflakeIdWorker;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -14,6 +14,7 @@ import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import javafx.util.Pair;
 
+import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -25,7 +26,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import static Util.EmailUtil.generateRandomCode;
 
 public class RegisterController {
 
@@ -48,17 +48,19 @@ public class RegisterController {
     private Button GetEmail;
 
     @FXML
-    private TextField username;
+    private TextField nickname;
 
     @FXML
     private PasswordField userpassword;
     @FXML
     private String generatedCode;
 
+    private SnowflakeIdWorker snowflakeIdWorker = new SnowflakeIdWorker(0, 0);
+
     // 添加一个用于存储验证码及其过期时间的映射
     private Map<String, Pair<String, LocalDateTime>> generatedCodes = new HashMap<>();
     @FXML
-    void username1(ActionEvent event) {
+    void nickname1(ActionEvent event) {
 
     }
 
@@ -77,14 +79,32 @@ public class RegisterController {
     @FXML
     void GetEmail1(ActionEvent event) {
         String emailAddress = Email.getText();
+        System.out.println("输入的QQ邮箱是:"+emailAddress);
         if (EmailUtil.isValidEmail(emailAddress)) {
-            generatedCode = generateRandomCode();
-            EmailUtil emailUtil = new EmailUtil(emailAddress, generatedCode);
-            new Thread(emailUtil).start();
-            EmailUtil.startCountdown(GetEmail);
+            try (Socket socket = new Socket("127.0.0.1", 6000);
+                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
-            // 添加生成的验证码和过期时间到映射中
-            generatedCodes.put(emailAddress, new Pair<>(generatedCode, LocalDateTime.now().plusMinutes(5)));
+                // 向服务端请求发送验证码
+                out.println("email_verification:" + emailAddress);
+
+                // 从服务端接收响应
+                String response = in.readLine();
+                if (response.length() == 6) {
+                    generatedCode = response;
+                    // 添加生成的验证码和过期时间到映射中
+                    // 开始倒计时
+                    EmailUtil.startCountdown(GetEmail);
+                    System.out.println("发送邮件的时间为"+LocalDateTime.now());
+                    System.out.println("过期的时间为"+ LocalDateTime.now().plusMinutes(EmailUtil.CODE_VALIDITY_MINUTES));
+                    generatedCodes.put(emailAddress, new Pair<>(generatedCode, LocalDateTime.now().plusMinutes(EmailUtil.CODE_VALIDITY_MINUTES)));
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "错误", "验证码发送失败，请稍后重试");
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         } else {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("错误");
@@ -104,11 +124,15 @@ public class RegisterController {
 // 在 RegisterController 类中的 register() 方法中，使用 Socket 连接服务端
     private void Register1() {
         String email = Email.getText().trim();
-        String userNameInput = username.getText().trim(); // 修改变量名称
+        String userNameInput = nickname.getText().trim(); // 修改变量名称
         String password = userpassword.getText().trim();
         String confirmPassword = userpassword1.getText().trim();
-        String verificationCode = GetEmail.getText().trim();
+        String verificationCode = PutCode.getText().trim();
+        long snowflakeId = snowflakeIdWorker.nextId();
+        String username = String.format("%010d", snowflakeId % 10000000000L);
 
+        System.out.println();
+        System.out.println("雪花算法生成的ID："+username);
         if (!isValidPassword(password)) {
             showAlert(Alert.AlertType.ERROR, "错误", "密码必须包含英文字母和数字，长度在8-18之间");
             return;
@@ -133,14 +157,15 @@ public class RegisterController {
                  BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
                 // 发送注册请求给服务端
-                out.println("register:" + email + ":" + username + ":" + password + ":" + verificationCode);
+                out.println("register:" + username + ":" +password  + ":" + email +":"+ userNameInput);
 
                 // 从服务端接收响应
                 String response = in.readLine();
-                if (response.equals("success")) {
-                    showAlert(Alert.AlertType.INFORMATION, "成功", "注册成功");
+                if ("success".equals(response)) {
+                    showAlert(Alert.AlertType.INFORMATION, "注册成功", "恭喜你注册成功！你的ID号为 ："+username);
+                    // 在接收到服务端发送的注册成功消息后：
+                    //JOptionPane.showMessageDialog(null, "注册成功！您的用户名是：" + username, "注册成功", JOptionPane.INFORMATION_MESSAGE);
                     // 跳转到登录页面
-                    // ...
                 } else {
                     showAlert(Alert.AlertType.ERROR, "错误", "注册失败，请检查您的信息是否正确");
                 }
