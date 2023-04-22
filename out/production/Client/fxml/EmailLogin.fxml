@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.image.*?>
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.EmailLoginController">
+   <children>
+      <ImageView fx:id="cancel1" fitHeight="433.0" fitWidth="849.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../image/邮箱登入.jpg" />
+         </image>
+      </ImageView>
+      <TextField fx:id="Mailboxnumber" layoutX="343.0" layoutY="121.0" onAction="#Mailboxnumber1" prefHeight="50.0" prefWidth="254.0" promptText="请输入你的邮箱号" />
+      <TextField fx:id="Verificationcode" layoutX="343.0" layoutY="196.0" onAction="#Verificationcode1" prefHeight="50.0" prefWidth="254.0" promptText="请输入验证码" />
+      <ImageView fitHeight="80.0" fitWidth="74.0" layoutX="262.0" layoutY="111.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../image/邮箱 (2).png" />
+         </image>
+      </ImageView>
+      <ImageView fitHeight="71.0" fitWidth="68.0" layoutX="265.0" layoutY="189.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../image/验证码.png" />
+         </image>
+      </ImageView>
+      <Button fx:id="Getverificationcode" layoutX="621.0" layoutY="207.0" mnemonicParsing="false" onAction="#Getverificationcode1" style="-fx-background-color: #C0C0C0;" text="获取验证码" />
+      <Button fx:id="Login" layoutX="346.0" layoutY="281.0" mnemonicParsing="false" onAction="#Login1" prefHeight="36.0" prefWidth="114.0" style="-fx-background-color: #3282F6;" text="登入" />
+      <Label layoutX="398.0" layoutY="36.0" prefHeight="50.0" prefWidth="398.0" text="邮箱登入" textAlignment="CENTER">
+         <font>
+            <Font name="System Bold" size="32.0" />
+         </font>
+      </Label>
+      <Button fx:id="cancel" layoutX="487.0" layoutY="281.0" mnemonicParsing="false" onAction="#cancel1" prefHeight="36.0" prefWidth="104.0" style="-fx-background-color: #3282F6;" text="取消" />
+   </children>
+</AnchorPane>
