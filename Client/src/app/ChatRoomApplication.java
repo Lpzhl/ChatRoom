@@ -17,7 +17,8 @@ public class ChatRoomApplication extends Application {
         /*
         路径前面添加了一个斜杠（/）。这表示从类路径的根目录开始查找资源。
          */
-        Parent root = FXMLLoader.load(getClass().getResource("/fxml/Login.fxml"));
+       Parent root = FXMLLoader.load(getClass().getResource("/fxml/Login.fxml"));
+        //Parent root = FXMLLoader.load(getClass().getResource("/fxml/jiemian2.fxml"));
         primaryStage.setTitle("聊天室");
         primaryStage.setScene(new Scene(root));
         primaryStage.show();

@@ -39,7 +39,7 @@ public class EmailUtil {
             return false;
         }
 
-        // 检查提供的验证码是否与生成的验证码匹配
+        // 检查提供的验证码是否与生成的验证码匹配 //在于isCodeValid方法只有在验证码匹配成功的情况下，才会从generatedCodes映射中删除验证码。
         if (code.equals(generatedCode)) {
             // 如果匹配成功，从映射中删除该电子邮件的条目并返回true
             generatedCodes.remove(email);

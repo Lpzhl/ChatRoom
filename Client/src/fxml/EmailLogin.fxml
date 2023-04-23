@@ -19,7 +19,7 @@
       <TextField fx:id="Verificationcode" layoutX="343.0" layoutY="196.0" onAction="#Verificationcode1" prefHeight="50.0" prefWidth="254.0" promptText="请输入验证码" />
       <ImageView fitHeight="80.0" fitWidth="74.0" layoutX="262.0" layoutY="111.0" pickOnBounds="true" preserveRatio="true">
          <image>
-            <Image url="@../image/邮箱 (2).png" />
+            <Image url="@../image/邮箱%20(2).png" />
          </image>
       </ImageView>
       <ImageView fitHeight="71.0" fitWidth="68.0" layoutX="265.0" layoutY="189.0" pickOnBounds="true" preserveRatio="true">

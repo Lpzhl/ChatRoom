@@ -60,13 +60,16 @@ public class EmailLoginController {
 
     }
 
+
+
     @FXML
     void Getverificationcode1(ActionEvent event) {
         String email = Mailboxnumber.getText();
         if (EmailUtil.isValidEmail(email)) {
             try (Socket socket = new Socket("127.0.0.1", 6000);
-                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+                 //字符打印流
+                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);//true表是开启自动刷新
+                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {//字符缓冲流，用来读取数据
 
                 // 向服务端请求发送验证码
                 out.println("email_verification:" + email);

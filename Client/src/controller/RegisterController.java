@@ -11,6 +11,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
 import javafx.util.Pair;
 
@@ -54,8 +55,27 @@ public class RegisterController {
     private PasswordField userpassword;
     @FXML
     private String generatedCode;
+    @FXML
+    private TextField Userpasswordi;
+    @FXML
+    private TextField Userpasswordi2;
+
+    @FXML
+    private ImageView Openeye;
+    @FXML
+    private ImageView Closeeye;
+
+    @FXML
+    private Button CheckOpen;
+    @FXML
+    private Button CheckOpen1;
+    @FXML
+    private ImageView Openeye1;
+    @FXML
+    private ImageView Closeeye1;
 
     private SnowflakeIdWorker snowflakeIdWorker = new SnowflakeIdWorker(0, 0);
+    private boolean passwordVisible = false;
 
     // 添加一个用于存储验证码及其过期时间的映射
     private Map<String, Pair<String, LocalDateTime>> generatedCodes = new HashMap<>();
@@ -129,7 +149,7 @@ public class RegisterController {
         String confirmPassword = userpassword1.getText().trim();
         String verificationCode = PutCode.getText().trim();
         long snowflakeId = snowflakeIdWorker.nextId();
-        String username = String.format("%010d", snowflakeId % 10000000000L);
+        String username = String.format("%010d", snowflakeId % 10000000000L);//雪花算法生成的ID
 
         System.out.println();
         System.out.println("雪花算法生成的ID："+username);
@@ -162,19 +182,19 @@ public class RegisterController {
                 // 从服务端接收响应
                 String response = in.readLine();
                 if ("success".equals(response)) {
-                    showAlert(Alert.AlertType.INFORMATION, "注册成功", "恭喜你注册成功！你的ID号为 ："+username);
+                    showAlert(Alert.AlertType.INFORMATION, "注册成功", "恭喜你注册成功！\n\n你的ID号为 ："+username);
                     // 在接收到服务端发送的注册成功消息后：
                     //JOptionPane.showMessageDialog(null, "注册成功！您的用户名是：" + username, "注册成功", JOptionPane.INFORMATION_MESSAGE);
                     // 跳转到登录页面
                 } else {
-                    showAlert(Alert.AlertType.ERROR, "错误", "注册失败，请检查您的信息是否正确");
+                    showAlert(Alert.AlertType.ERROR, "错误", "注册失败，该邮箱已被绑定！");
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
         else{
-            showAlert(Alert.AlertType.ERROR, "错误", "验证码错误或已过期");
+            showAlert(Alert.AlertType.ERROR, "错误", "错误原因可能是：\n1. 验证码错误或已过期\n2. 你在发送验证码之后修改了邮箱号");
         }
     }
 
@@ -199,13 +219,67 @@ public class RegisterController {
     }
 
     @FXML
+    void Userpasswordi2(ActionEvent event) {
+
+    }
+    @FXML
+    void Userpasswordi1(ActionEvent event) {
+
+    }
+
+    @FXML
     void userpassword1(ActionEvent event) {
 
     }
 
-    //用户
-    private boolean isValidUsername(String username) {
-        return username.matches("\\d{10}");
+    @FXML
+    public void CheckOpen1() {
+        System.out.println("查看密码按钮被点击");
+        if (!passwordVisible) {
+            // 显示密码
+            Userpasswordi.setText(userpassword.getText());
+            Userpasswordi.setVisible(true);
+            userpassword.setVisible(false);
+
+            // 切换图片
+            Closeeye.setVisible(false);
+            Openeye.setVisible(true);
+        } else {
+            // 隐藏密码
+            userpassword.setText(Userpasswordi.getText());
+            userpassword.setVisible(true);
+            Userpasswordi.setVisible(false);
+
+            // 切换图片
+            Openeye.setVisible(false);
+            Closeeye.setVisible(true);
+        }
+        passwordVisible = !passwordVisible;
+    }
+
+    @FXML
+    public void CheckOpen2() {
+        System.out.println("查看密码按钮被点击");
+        if (!passwordVisible) {
+            // 显示密码
+            Userpasswordi2.setText(userpassword1.getText());
+            Userpasswordi2.setVisible(true);
+            userpassword1.setVisible(false);
+
+            // 切换图片
+            Closeeye1.setVisible(false);
+            Openeye1.setVisible(true);
+        } else {
+            // 隐藏密码
+            userpassword1.setText(Userpasswordi2.getText());
+            userpassword1.setVisible(true);
+            Userpasswordi2.setVisible(false);
+
+            // 切换图片
+            Openeye1.setVisible(false);
+            Closeeye1.setVisible(true);
+        }
+        passwordVisible = !passwordVisible;
     }
 
     private boolean isValidPassword(String password) {

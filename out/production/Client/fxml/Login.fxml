@@ -49,7 +49,19 @@
         <Button fx:id="Register" layoutX="903.0" layoutY="240.0" mnemonicParsing="false" onAction="#Register1" prefHeight="36.0" prefWidth="105.0" text="注册账号" />
         <Button fx:id="EmailIogin" layoutX="680.0" layoutY="390.0" mnemonicParsing="false" onAction="#EmailIogin1" prefHeight="43.0" prefWidth="330.0" style="-fx-background-color: #73FBFD;" text="邮箱登入" />
         <CheckBox fx:id="Rememberpassword" layoutX="681.0" layoutY="293.0" mnemonicParsing="false" onAction="#Rememberpassword1" style="-fx-background-color: #EB3324;" text="记住密码" />
+      <TextField fx:id="Userpasswordi" layoutX="681.0" layoutY="185.0" onAction="#Userpasswordi1" prefHeight="43.0" prefWidth="324.0" promptText="请输入密码" />
       <PasswordField fx:id="Userpassword" layoutX="681.0" layoutY="185.0" onAction="#Userpassword1" prefHeight="43.0" prefWidth="324.0" promptText="请输入密码" />
       <Button fx:id="Cleardata" layoutX="903.0" layoutY="287.0" mnemonicParsing="false" prefHeight="36.0" prefWidth="105.0" text="清空数据" />
+      <ImageView fx:id="Openeye" fitHeight="42.0" fitWidth="36.0" layoutX="969.0" layoutY="195.0" pickOnBounds="true" preserveRatio="true" visible="false">
+         <image>
+            <Image url="@../image/开眼1.png" />
+         </image>
+      </ImageView>
+      <ImageView fx:id="Closeeye" fitHeight="36.0" fitWidth="36.0" layoutX="969.0" layoutY="195.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../image/闭眼1.png" />
+         </image>
+      </ImageView>
+      <Button fx:id="CheckOpen" layoutX="966.0" layoutY="189.0" mnemonicParsing="false" onAction="#CheckOpen1" opacity="0.0" prefHeight="36.0" prefWidth="43.0" />
     </children>
 </AnchorPane>

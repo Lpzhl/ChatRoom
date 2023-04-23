@@ -26,7 +26,31 @@
       <Button fx:id="Register" layoutX="222.0" layoutY="316.0" mnemonicParsing="false" onAction="#Register1" prefHeight="36.0" prefWidth="148.0" style="-fx-background-color: #3282F6;" text="注册" />
       <Button fx:id="cancel" layoutX="412.0" layoutY="316.0" mnemonicParsing="false" onAction="#cancel" prefHeight="36.0" prefWidth="124.0" style="-fx-background-color: #3282F6;" text="取消" />
       <TextField fx:id="PutCode" layoutX="221.0" layoutY="265.0" onAction="#PutCode1" prefHeight="36.0" prefWidth="157.0" promptText="请输入验证码" />
+      <TextField fx:id="Userpasswordi" layoutX="221.0" layoutY="107.0" onAction="#Userpasswordi1" prefHeight="36.0" prefWidth="314.0" promptText="请输入密码" />
       <PasswordField fx:id="userpassword" layoutX="221.0" layoutY="107.0" onAction="#userpassword1" prefHeight="36.0" prefWidth="314.0" promptText="请输入密码" />
+      <TextField fx:id="Userpasswordi2" layoutX="221.0" layoutY="161.0" onAction="#Userpasswordi2" prefHeight="36.0" prefWidth="314.0" promptText="请确认你的密码" />
       <PasswordField fx:id="userpassword1" layoutX="221.0" layoutY="161.0" onAction="#userpassword1" prefHeight="36.0" prefWidth="314.0" promptText="请确认你的密码" />
+      <ImageView fx:id="Openeye" fitHeight="36.0" fitWidth="38.0" layoutX="498.0" layoutY="112.0" pickOnBounds="true" preserveRatio="true" visible="false">
+         <image>
+            <Image url="@../image/开眼1.png" />
+         </image>
+      </ImageView>
+      <ImageView fx:id="Closeeye" fitHeight="36.0" fitWidth="38.0" layoutX="498.0" layoutY="107.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../image/闭眼1.png" />
+         </image>
+      </ImageView>
+      <Button fx:id="CheckOpen" layoutX="485.0" layoutY="107.0" mnemonicParsing="false" onAction="#CheckOpen1" opacity="0.06" prefHeight="36.0" prefWidth="49.0" />
+      <ImageView fx:id="Openeye1" fitHeight="36.0" fitWidth="38.0" layoutX="497.0" layoutY="166.0" pickOnBounds="true" preserveRatio="true" visible="false">
+         <image>
+            <Image url="@../image/开眼1.png" />
+         </image>
+      </ImageView>
+      <ImageView fx:id="Closeeye1" fitHeight="36.0" fitWidth="38.0" layoutX="498.0" layoutY="161.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../image/闭眼1.png" />
+         </image>
+      </ImageView>
+      <Button fx:id="CheckOpen1" layoutX="485.0" layoutY="161.0" mnemonicParsing="false" onAction="#CheckOpen2" opacity="0.06" prefHeight="36.0" prefWidth="49.0" />
    </children>
 </AnchorPane>

@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+import javafx.scene.image.ImageView;
 import javafx.util.Pair;
 import Util.EmailUtil;
 import javafx.event.ActionEvent;
@@ -49,9 +50,27 @@ public class RetrievePasswordController {
 
     @FXML
     private TextField Retrievepasswordemail;
+    @FXML
+    private TextField Userpasswordi;
+    @FXML
+    private TextField Userpasswordi2;
+
+    @FXML
+    private ImageView Openeye;
+    @FXML
+    private ImageView Closeeye;
+    @FXML
+    private Button CheckOpen;
+    @FXML
+    private Button CheckOpen1;
+    @FXML
+    private ImageView Openeye1;
+    @FXML
+    private ImageView Closeeye1;
 
     // 添加一个用于存储验证码及其过期时间的映射
     private Map<String, Pair<String, LocalDateTime>> generatedCodes = new HashMap<>();
+    private boolean passwordVisible = false;
 
     @FXML
     void UsernameID1(ActionEvent event) {
@@ -151,7 +170,7 @@ public class RetrievePasswordController {
                  BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
                 // 发送重置密码请求给服务端
-                out.println("resetPassword:" + username + ":" + newPassword);
+                out.println("resetPassword:" + username + ":" + newPassword + ":"+ email);
 
                 // 从服务端接收响应
                 String response = in.readLine();
@@ -160,7 +179,8 @@ public class RetrievePasswordController {
                     // 跳转到登录页面
                     // ...
                 } else {
-                    showAlert(Alert.AlertType.ERROR, "错误", "密码重置失败，请检查您的信息是否正确");
+                    //showAlert(Alert.AlertType.ERROR, "错误", "密码重置失败，请检查您的信息是否正确");
+                    showAlert(Alert.AlertType.ERROR, "错误", "密码重置失败，邮箱不匹配");
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -192,4 +212,60 @@ public class RetrievePasswordController {
         }
     }
 
+    public void CheckOpen1() {
+        System.out.println("查看密码按钮被点击");
+        if (!passwordVisible) {
+            // 显示密码
+            Userpasswordi.setText(Resetpassword.getText());
+            Userpasswordi.setVisible(true);
+            Resetpassword.setVisible(false);
+
+            // 切换图片
+            Closeeye.setVisible(false);
+            Openeye.setVisible(true);
+        } else {
+            // 隐藏密码
+            Resetpassword.setText(Userpasswordi.getText());
+            Resetpassword.setVisible(true);
+            Userpasswordi.setVisible(false);
+
+            // 切换图片
+            Openeye.setVisible(false);
+            Closeeye.setVisible(true);
+        }
+        passwordVisible = !passwordVisible;
+    }
+
+    @FXML
+    public void CheckOpen2() {
+        System.out.println("查看密码按钮被点击");
+        if (!passwordVisible) {
+            // 显示密码
+            Userpasswordi2.setText(Resetpassword2.getText());
+            Userpasswordi2.setVisible(true);
+            Resetpassword2.setVisible(false);
+
+            // 切换图片
+            Closeeye1.setVisible(false);
+            Openeye1.setVisible(true);
+        } else {
+            // 隐藏密码
+            Resetpassword2.setText(Userpasswordi2.getText());
+            Resetpassword2.setVisible(true);
+            Userpasswordi2.setVisible(false);
+
+            // 切换图片
+            Openeye1.setVisible(false);
+            Closeeye1.setVisible(true);
+        }
+        passwordVisible = !passwordVisible;
+    }
+
+    public void Userpasswordi1(ActionEvent actionEvent) {
+
+    }
+
+    public void Userpasswordi2(ActionEvent actionEvent) {
+
+    }
 }

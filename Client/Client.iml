@@ -30,5 +30,7 @@
     <orderEntry type="library" name="hutool-all-5.8.10" level="project" />
     <orderEntry type="library" name="Java EE 6-Java EE 6" level="project" />
     <orderEntry type="library" name="javax.mail" level="project" />
+    <orderEntry type="library" name="gson-2.8.9" level="project" />
+    <orderEntry type="module" module-name="Server" />
   </component>
 </module>

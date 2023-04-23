@@ -55,7 +55,7 @@ public class EmailVca implements Callable<Void> {
             // 设置邮件的标题
             message.setSubject("【双创科技】");
             // 设置邮件的正文
-            message.setText("验证码: " + " "+generatedCode +" "+ "于QQ邮箱身份验证，3分钟内有效，请勿泄露和转发。如非本人操作，请忽略此短信。");
+            message.setText("验证码: " + " "+generatedCode +" "+ "用于QQ邮箱身份验证，3分钟内有效，请勿泄露和转发。如非本人操作，请忽略此短信。");
             System.out.println(generatedCode);
             // 发送邮件
             Transport.send(message);
@@ -71,9 +71,18 @@ public class EmailVca implements Callable<Void> {
 
 
     // 生成一个随机六位数验证码
+    //定义了一个公共静态方法 generateRandomCode()，该方法的返回值类型为 String 类型。
     public static String generateRandomCode() {
-        Random random = new SecureRandom();
+        Random random = new SecureRandom();//创建了一个名为 random 的 Random 对象，这个对象用于生成伪随机数字序列。
+        /*
+        通过调用 Random 对象的 nextInt(int bound) 方法，生成一个范围在 0 到 (bound-1) 之间的一个整数。
+        在这里，bound 参数被设置成了 1_000_000，所以随机生成的数字 code 取值范围为：[0, 999999] ，即六位数。
+         */
         int code = random.nextInt(1_000_000);
+        /*
+        然后将生成的随机数 code 格式化为六位字符串，使用了 String 类型的 format() 方法，
+        其中 "%06d" 表示转换成六位的数字字符串，不足六位则左侧补 0。
+         */
         return String.format("%06d", code);
     }
 }
