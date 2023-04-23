@@ -1,5 +1,8 @@
 package serverTest;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.math.BigInteger;
 import java.sql.*;
 
 public class DatabaseConnection {
@@ -92,6 +95,17 @@ public class DatabaseConnection {
             e.printStackTrace();
         }
         return false;
+    }
+
+    //MD5加密
+    private String md5(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            md.update(input.getBytes(), 0, input.length());
+            return new BigInteger(1, md.digest()).toString(16);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("MD5 algorithm not found.", e);
+        }
     }
 
 }

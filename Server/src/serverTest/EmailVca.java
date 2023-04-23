@@ -55,7 +55,7 @@ public class EmailVca implements Callable<Void> {
             // 设置邮件的标题
             message.setSubject("【双创科技】");
             // 设置邮件的正文
-            message.setText("验证码: " + " "+generatedCode +" "+ "于QQ邮箱身份验证，3分钟内有效，请勿泄露和转发。如非本人操作，请忽略此短信。");
+            message.setText("验证码: " + " "+generatedCode +" "+ "用于QQ邮箱身份验证，3分钟内有效，请勿泄露和转发。如非本人操作，请忽略此短信。");
             System.out.println(generatedCode);
             // 发送邮件
             Transport.send(message);
