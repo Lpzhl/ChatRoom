@@ -89,6 +89,8 @@ public class ServerHandler implements Runnable {
                 case "getUserInfo":
                     handleGetUserInfo(out, requestParts);
                     break;
+                case "FindPassword":
+                    handleChangePassword(out,requestParts);
                 default:
                     out.println("error");
                     break;
@@ -116,6 +118,22 @@ public class ServerHandler implements Runnable {
             }
         }
 
+    }
+
+    //处理修改密码
+    private void handleChangePassword(PrintWriter out, String[] requestParts) {
+        if(requestParts.length != 3) {
+            out.println("false");
+            return;
+        }
+        String username = requestParts[1];
+        String password = requestParts[2];
+        boolean loginSuccess = dbConnection.checkLogin(username, password);
+        if (loginSuccess) {
+            out.println("success:");
+        } else {
+            out.println("false:");
+        }
     }
 
     private void handleGetUserInfo(PrintWriter out, String[] requestParts) {
@@ -148,17 +166,17 @@ public class ServerHandler implements Runnable {
         }
 
         String username = user.getUsername();
-        System.out.println("hhh "+username);
+        System.out.println("请求者： "+username);
         String newAvatarPath = user.getAvatar();
-        System.out.println(newAvatarPath);
+        System.out.print("  头像："+newAvatarPath);
         String newNickname = user.getNickname();
-        System.out.println(newNickname);
+        System.out.print("  昵称: "+newNickname);
         String newGender = user.getGender();
-        System.out.println(newGender);
+        System.out.print(" 性别: "+newGender);
         LocalDate newBirthday = user.getBirthday();
-        System.out.println(newBirthday);
+        System.out.print("  生日: "+newBirthday);
         String newSignature = user.getSignature();
-        System.out.println(newSignature);
+        System.out.print("  个性签名："+newSignature);
 
         if (newBirthday != null) {
             try {
@@ -168,15 +186,10 @@ public class ServerHandler implements Runnable {
                 return;
             }
         }
-        System.out.println(username);
-        System.out.println(newGender);
-        System.out.println(newAvatarPath);
-        System.out.println(newBirthday);
         dbConnection.updateUser(username, newAvatarPath, newNickname, newGender, newBirthday, newSignature);
         out.println("success");
         System.out.println("更新数据成功");
     }
-
 
 
     // 处理注册请求

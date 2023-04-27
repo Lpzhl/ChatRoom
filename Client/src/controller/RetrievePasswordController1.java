@@ -25,7 +25,7 @@ import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
 
-public class RetrievePasswordController {
+public class RetrievePasswordController1 {
 
     @FXML
     private PasswordField Resetpassword2;

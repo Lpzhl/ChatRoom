@@ -132,9 +132,12 @@ public class DatabaseConnection {
                 if (resultSet.wasNull()) gender = "未知";
 
                 // 获取生日
-                LocalDate birthday = resultSet.getDate("birthday").toLocalDate();
-                if (resultSet.wasNull()) birthday = LocalDate.of(1999, 6, 7);
-
+                LocalDate birthday = null;
+                if (!resultSet.wasNull()) {
+                    birthday = resultSet.getDate("birthday").toLocalDate();
+                } else {
+                    birthday = LocalDate.of(1999, 6, 7);
+                }
                 // 获取个性签名
                 String signature = resultSet.getString("signature");
                 if (resultSet.wasNull()) signature = "这个人很懒什么都没有了留下~";
@@ -206,7 +209,7 @@ public class DatabaseConnection {
     }
 
 
-    //检测登入
+    //检测登入和   //处理检测原始密码是否正确
     public boolean checkLogin(String username, String password) {
         String query = "SELECT password FROM users WHERE username = ?";
         try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
@@ -293,7 +296,6 @@ public class DatabaseConnection {
             e.printStackTrace();
         }
     }
-
 
 }
 

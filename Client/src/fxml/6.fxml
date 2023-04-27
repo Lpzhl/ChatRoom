@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<BorderPane prefHeight="600.0" prefWidth="800.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/8" stylesheets="@../fxml/styles.css">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="top-container">
+            <Button styleClass="avatar-button">
+                <graphic>
+                    <ImageView fx:id="avatarImageView" fitHeight="80.0" fitWidth="80.0" pickOnBounds="true" preserveRatio="true">
+                        <image>
+                            <Image url="@../image/头像1.jpg" />
+                        </image>
+                    </ImageView>
+                </graphic>
+            </Button>
+            <Label fx:id="nicknameLabel" text="Nickname" styleClass="nickname-label" />
+            <Region HBox.hgrow="ALWAYS" />
+            <Button fx:id="editProfileButton" text="编辑资料" />
+        </HBox>
+    </top>
+    <center>
+        <VBox>
+            <TabPane prefHeight="600.0" prefWidth="800.0" tabClosingPolicy="UNAVAILABLE">
+                <tabs>
+                    <Tab text="消息">
+                        <content>
+                            <ListView fx:id="messagesListView" />
+                        </content>
+                    </Tab>
+                    <Tab text="好友">
+                        <content>
+                            <ListView fx:id="friendsListView" />
+                        </content>
+                    </Tab>
+                    <Tab text="群聊">
+                        <content>
+                            <ListView fx:id="groupsListView" />
+                        </content>
+                    </Tab>
+                </tabs>
+            </TabPane>
+            <HBox spacing="10.0" alignment="CENTER" styleClass="bottom-container">
+                <Button fx:id="addFriendButton" text="添加好友" />
+                <Button fx:id="addGroupButton" text="添加群聊" />
+            </HBox>
+        </VBox>
+    </center>
+</BorderPane>

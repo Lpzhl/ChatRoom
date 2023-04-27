@@ -54,6 +54,8 @@ public class LoginController {
     private static final String LOGIN_FILE = "loginCredentials.properties";
     private boolean passwordVisible = false;
     private User user;
+    private User currentUser;
+
 
 
     // 弹出警告框的方法
@@ -118,36 +120,28 @@ public class LoginController {
         System.out.println("登入按钮被点击");
         String username = UserNameInput.getText().trim();
         String password = Userpassword.getText().trim();
-        boolean loginSuccess = login(username, password);
+        User user = login(username, password);
 
-        if (loginSuccess) {
+        if (user != null) {
             System.out.println("登录成功");
             String currentUser = UserNameInput.getText();
-            //EditUserInfoController.setCurrentUsername(currentUser);
-            // 更新全局变量 username
+            this.currentUser = user; // 保存登录成功的用户信息
             // 如果用户选择了"记住密码"选项
             if (Rememberpassword.isSelected()) {
                 // 将当前用户名和密码保存到登录文件中
                 saveLoginCredentials(currentUser, Userpassword.getText());
             } else {
-                // 否则，仅保存用户名
+            // 否则，仅保存用户名
                 saveLoginCredentials(currentUser, "");
             }
             // 跳转到其他场景，例如主界面
             //showNewScene("/fxml/Main.fxml", "主界面");
             // 将当前登录的用户传递给聊天室控制器
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/Chatmenuinterface.fxml"));
-            fxmlLoader.setControllerFactory(c -> {
-                PleaseProvideController controller = new PleaseProvideController();
-                controller.setCurrentUser(user);
-                // 设置用户头像
-                //controller.updateHomeScreenAvatar(user.getAvatar());
-                // 创建 EditUserInfoController 实例并设置当前用户名
-
-                Platform.runLater(() -> controller.updateHomeScreenAvatar(user.getAvatar()));
-                return controller;
-            });
             Parent root = fxmlLoader.load();
+            PleaseProvideController chatController = fxmlLoader.getController();
+            chatController.setCurrentUser(user);
+            chatController.updateHomeScreenAvatar(user.getAvatar());
             Scene scene = new Scene(root);
             Stage stage = new Stage();
             stage.setTitle("聊天室");
@@ -160,39 +154,31 @@ public class LoginController {
             showAlert(Alert.AlertType.ERROR, "错误", "用户名或密码错误");
         }
     }
-    private boolean login(String username, String password) {
-        boolean loginSuccess = false;
-        user= null;
+
+    private User login(String username, String password) {
+        User user = null;
         try (Socket socket = new Socket("127.0.0.1", 6000);
-             //PrintWriter 对象包装了 Socket 的输出流，可以向服务器发送数据；
              PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-             //BufferedReader 对象包装了 Socket 的输入流，可以从服务器接收数据。
              BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
-            // 检查Socket的状态
             if (socket.isClosed()) {
                 System.out.println("Socket is closed before sending request to server");
             } else {
                 System.out.println("Socket is open before sending request to server");
             }
-            // 发送登录请求给服务端
             out.println("login:" + username + ":" + password);
-
-            // 从服务端接收响应
             String response = in.readLine();
-            String[] responseParts = response.split(":",2);
+            System.out.println(response);
+            String[] responseParts = response.split(":", 2);
             if ("success".equals(responseParts[0])) {
                 System.out.println(responseParts[1]);
-                loginSuccess = true;
                 Gson gson = new Gson();
-
                 user = gson.fromJson(responseParts[1], User.class);
             }
         } catch (IOException e) {
-            e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "错误", "无法连接到服务器，请稍后再试");
+            System.err.println("网络错误: " + e.getMessage());
         }
-        return loginSuccess;
+        return user;
     }
 
     // 从登录文件中读取登录信息
