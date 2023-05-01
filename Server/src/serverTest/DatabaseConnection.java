@@ -7,6 +7,8 @@ import java.security.NoSuchAlgorithmException;
 import java.math.BigInteger;
 import java.sql.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DatabaseConnection {
 
@@ -24,6 +26,174 @@ public class DatabaseConnection {
         }
     }
 
+    // 该方法通过用户ID从数据库中获取该用户的所有好友
+    public List<User1> getFriendsByUserId(int userId) {
+        // 创建一个空的好友列表
+        List<User1> friends = new ArrayList<>();
+        // 创建一个SQL查询语句，用于从friends表中获取指定用户的所有好友ID
+        String query = "SELECT friend_id FROM friends WHERE user_id = ?";
+        // 使用try-with-resources结构来自动关闭数据库连接和PreparedStatement
+        try (
+                // 获取数据库连接
+                Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                // 预处理SQL查询语句
+                PreparedStatement statement = connection.prepareStatement(query)
+        ) {
+            // 将SQL查询语句中的第一个占位符替换为用户ID
+            statement.setInt(1, userId);
+            // 执行SQL查询语句并获取结果集
+            ResultSet resultSet = statement.executeQuery();
+            // 遍历结果集
+            while (resultSet.next()) {
+                // 从当前结果中获取好友ID
+                int friendId = resultSet.getInt("friend_id");
+                // 通过好友ID从数据库中获取好友对象
+                User1 friend = getUserById(friendId);
+                // 将好友对象添加到好友列表中
+                friends.add(friend);
+            }
+        } catch (SQLException e) {
+            // 如果在获取数据库连接或执行SQL查询语句时发生错误，打印堆栈轨迹
+            e.printStackTrace();
+        }
+        // 返回好友列表
+        return friends;
+    }
+
+    public User1 getUserById(int id) {
+        User1 user = null;
+        String query = "SELECT * FROM users WHERE id = ?";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, id);
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                // 从数据库获取所有字段的值，这里假设你的字段名和User1类的属性名相同
+                String username = resultSet.getString("username");
+                String password = resultSet.getString("password");
+                String email = resultSet.getString("email");
+                String avatar = resultSet.getString("avatar");
+                String nickname = resultSet.getString("nickname");
+                String gender = resultSet.getString("gender");
+                LocalDate birthday = resultSet.getDate("birthday").toLocalDate();
+                String signature = resultSet.getString("signature");
+                String status = resultSet.getString("status");
+                LocalDate createdAt = resultSet.getTimestamp("created_at").toLocalDateTime().toLocalDate();
+                LocalDate updatedAt = resultSet.getTimestamp("updated_at").toLocalDateTime().toLocalDate();
+
+                // 创建User对象
+                user = new User1(id, username, email, avatar, nickname, gender, birthday, signature, status, createdAt, updatedAt);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return user;
+    }
+
+
+    //查找好友
+    public User1 findUser(String username) {
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        User1 user = null;
+        try {
+            conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            String checkSql = "SELECT * FROM users WHERE username = ?";
+            pstmt = conn.prepareStatement(checkSql);
+            pstmt.setString(1, username);
+            rs = pstmt.executeQuery();
+            if(rs.next()){
+                user = new User1();
+                user.setNickname(rs.getString("nickname"));
+                user.setAvatar(rs.getString("avatar"));
+                user.setGender(rs.getString("gender"));
+                System.out.println("查找到的好友信息："+user);
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        } finally {
+            try {
+                if(rs != null) rs.close();
+                if(pstmt != null) pstmt.close();
+                if(conn != null) conn.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
+        }
+        return user;
+    }
+
+
+    //添加好友
+    public boolean addFriend(String username1, String username2) {
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            // 检查两个用户名是否存在
+            String checkSql = "SELECT COUNT(*) FROM users WHERE username IN (?, ?)";
+            pstmt = conn.prepareStatement(checkSql);
+            pstmt.setString(1, username1);
+            pstmt.setString(2, username2);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                int count = rs.getInt(1);
+                if (count < 2) {
+                    System.out.println("添加失败，无该用户！！！");
+                    // 至少一个用户名不存在
+                    return false;
+                }
+            }
+            rs.close();
+            pstmt.close();
+
+            // 检查是否已经是好友
+            String checkFriendSql = "SELECT COUNT(*) FROM friends f " +
+                    "JOIN users u1 ON f.user_id = u1.id " +
+                    "JOIN users u2 ON f.friend_id = u2.id " +
+                    "WHERE (u1.username = ? AND u2.username = ?) OR (u1.username = ? AND u2.username = ?)";
+            pstmt = conn.prepareStatement(checkFriendSql);
+            pstmt.setString(1, username1);
+            pstmt.setString(2, username2);
+            pstmt.setString(3, username2);
+            pstmt.setString(4, username1);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                int count = rs.getInt(1);
+                if (count > 0) {
+                    System.out.println("添加失败你们已经是好友了！！！");
+                    // 已经是好友
+                    return false;
+                }
+            }
+            rs.close();
+            pstmt.close();
+            // 以上检查都通过，添加好友
+            String insertSql = "INSERT INTO friends (user_id, friend_id, created_at, updated_at) " +
+                    "SELECT u1.id, u2.id, NOW(), NOW() FROM users u1, users u2 " +
+                    "WHERE u1.username = ? AND u2.username = ?";
+            pstmt = conn.prepareStatement(insertSql);
+            pstmt.setString(1, username1);
+            pstmt.setString(2, username2);
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            // 关闭资源
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
     public User1 getUserInfo(String username) {
         User1 user = null;
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
@@ -137,6 +307,58 @@ public class DatabaseConnection {
                     birthday = resultSet.getDate("birthday").toLocalDate();
                 } else {
                     birthday = LocalDate.of(1999, 6, 7);
+                }
+                // 获取个性签名
+                String signature = resultSet.getString("signature");
+                if (resultSet.wasNull()) signature = "这个人很懒什么都没有了留下~";
+
+                // 获取状态
+                String status = resultSet.getString("status");
+                if (resultSet.wasNull()) status = "离线";
+
+                // 使用全参数构造方法创建 User1 对象
+              user1 = new User1(id, username, email, avatarUrl, nickname, gender, birthday, signature, status, createdAt, updatedAt);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return user1;
+    }
+
+    public User1 getUserByEmail(String email) {
+        User1 user1 = null;
+        String query = "SELECT * FROM users WHERE email = ?";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setString(1, email);
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                // 从数据库获取所有字段的值
+                int id = resultSet.getInt("id");
+                String username = resultSet.getString("username");
+
+                // 获取创建时间和更新时间
+                LocalDate createdAt = resultSet.getTimestamp("created_at").toLocalDateTime().toLocalDate();
+                LocalDate updatedAt = resultSet.getTimestamp("updated_at").toLocalDateTime().toLocalDate();
+
+                // 获取头像 URL
+                String avatarUrl = resultSet.getString("avatar");
+                if (avatarUrl == null) avatarUrl = "/image/默认头像.png";
+
+                // 获取昵称
+                String nickname = resultSet.getString("nickname");
+                if (resultSet.wasNull()) nickname = "？？？";
+
+                // 获取性别
+                String gender = resultSet.getString("gender");
+                if (resultSet.wasNull()) gender = "未知";
+
+                // 获取生日
+                LocalDate birthday = null;
+                if (!resultSet.wasNull()) {
+                    birthday = resultSet.getDate("birthday").toLocalDate();
+                } else {
+                    birthday = LocalDate.of(1900, 1, 1);
                 }
                 // 获取个性签名
                 String signature = resultSet.getString("signature");

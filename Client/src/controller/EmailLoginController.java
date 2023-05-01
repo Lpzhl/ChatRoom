@@ -1,6 +1,8 @@
 package controller;
 
 import Util.EmailUtil;
+import client.User;
+import com.google.gson.Gson;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -106,6 +108,7 @@ public class EmailLoginController {
 
     @FXML
     void Login1(ActionEvent event) {
+        User user = null;
         String email = Mailboxnumber.getText();
         String verificationCode = Verificationcode.getText();
 
@@ -135,8 +138,26 @@ public class EmailLoginController {
                 out.println("emailLogin:" + email);
 
                 String response = in.readLine();
-                if ("success".equals(response)) {
+                System.out.println(response);
+                String[] resposeParts = response.split(":",2);
+                if ("success".equals(resposeParts[0])) {
+                    System.out.println(resposeParts[1]);
+                    Gson gson = new Gson();
+                    user = gson.fromJson(resposeParts[1], User.class);
+                    System.out.println("反序列化后： "+user);
                     showAlert(Alert.AlertType.INFORMATION, "成功", "登录成功");
+                    FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/Chatmenuinterface.fxml"));
+                    Parent root = fxmlLoader.load();
+                    PleaseProvideController chatController = fxmlLoader.getController();
+                    chatController.setCurrentUser(user);
+                    chatController.updateHomeScreenAvatar(user.getAvatar());
+                    Scene scene = new Scene(root);
+                    Stage stage = new Stage();
+                    stage.setTitle("聊天室");
+                    stage.setScene(scene);
+                    Stage stage1 = (Stage) Login.getScene().getWindow();
+                    stage.show();
+                    stage1.close();
                     //跳转 聊天室界面
                 } else {
                     showAlert(Alert.AlertType.ERROR, "错误", "该邮箱未绑定QQ号，登录失败");

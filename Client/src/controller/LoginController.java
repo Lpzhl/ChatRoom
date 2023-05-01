@@ -53,7 +53,6 @@ public class LoginController {
     // 登录文件名
     private static final String LOGIN_FILE = "loginCredentials.properties";
     private boolean passwordVisible = false;
-    private User user;
     private User currentUser;
 
 
@@ -78,6 +77,7 @@ public class LoginController {
             if (!UserNameHistory.getItems().isEmpty()) {
                 //如果UserNameHistory中有用户名，它会获取最后一个用户名，并将其设置为用户名输入框UserNameInput的文本内容。
                 String lastUser = UserNameHistory.getItems().get(UserNameHistory.getItems().size() - 1);
+                //String lastUser = UserNameHistory.getItems().get(0);
                 UserNameInput.setText(lastUser);
                 //如果"记住密码"复选框Rememberpassword被选中，代码会从loginCredentials中获取最后一个用户名对应的密码，并将其设置为密码输入框Userpassword的文本内
                 if (Rememberpassword.isSelected()) {
@@ -155,6 +155,7 @@ public class LoginController {
         }
     }
 
+
     private User login(String username, String password) {
         User user = null;
         try (Socket socket = new Socket("127.0.0.1", 6000);
@@ -174,6 +175,7 @@ public class LoginController {
                 System.out.println(responseParts[1]);
                 Gson gson = new Gson();
                 user = gson.fromJson(responseParts[1], User.class);
+                System.out.println("反序列化后："+user);
             }
         } catch (IOException e) {
             System.err.println("网络错误: " + e.getMessage());

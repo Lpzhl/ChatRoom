@@ -23,7 +23,7 @@
                            <graphic>
                               <ImageView fx:id="HomeScreenAvatar" fitHeight="109.0" fitWidth="142.0" pickOnBounds="true" preserveRatio="true">
                                  <image>
-                                    <Image url="@../image/裴.bmp" />
+                                    <Image url="@../image/默认头像.png" />
                                  </image></ImageView>
                            </graphic></ToggleButton>
                             </children>
@@ -31,7 +31,7 @@
                         <Circle fx:id="onlineStatusIndicator" fill="white" radius="15.0" />
                     </children>
                 </HBox>
-                <ToggleButton fx:id="message" onAction="#message1" prefHeight="181.0" prefWidth="189.0" style="-fx-background-color: #A9A9A9;">
+                <ToggleButton fx:id="message" onAction="#message1" prefHeight="156.0" prefWidth="168.0" style="-fx-background-color: #A9A9A9;">
                     <graphic>
                         <ImageView fitHeight="96.0" fitWidth="100.0">
                             <image>
@@ -40,7 +40,7 @@
                         </ImageView>
                     </graphic>
                 </ToggleButton>
-                <ToggleButton fx:id="friendsButton" onAction="#friendsButton1" prefHeight="173.0" prefWidth="166.0" style="-fx-background-color: #A9A9A9;">
+                <ToggleButton fx:id="friendsButton" onAction="#friendsButton1" prefHeight="137.0" prefWidth="143.0" style="-fx-background-color: #A9A9A9;">
                     <graphic>
                         <ImageView fx:id="Goodfriend" fitHeight="92.0" fitWidth="77.0">
                             <image>
@@ -49,6 +49,7 @@
                         </ImageView>
                     </graphic>
                 </ToggleButton>
+            <ToggleButton fx:id="RequestisLt" mnemonicParsing="false" onAction="#RequestisLt1" prefHeight="125.0" prefWidth="145.0" text="请求消息" />
                 <Region VBox.vgrow="ALWAYS" />
                 <Button fx:id="exitButton" onAction="#GoHome" prefHeight="59.0" prefWidth="110.0" text="退出">
                     <font>
@@ -69,7 +70,7 @@
                 <HBox fx:id="friendsAndGroupChatsButtonsBox" prefHeight="36.0" prefWidth="296.0" spacing="10" visible="false">
                     <children>
                         <ToggleButton fx:id="friendsTabButton" maxWidth="200" minWidth="100" onAction="#FriendsTab" prefHeight="36.0" prefWidth="147.0" text="好友" />
-                        <ToggleButton fx:id="groupChatsTabButton" maxWidth="200" minWidth="100" prefHeight="36.0" prefWidth="148.0" text="群聊" />
+                        <ToggleButton fx:id="groupChatsTabButton" maxWidth="200" minWidth="100" onAction="#GroupsTab" prefHeight="36.0" prefWidth="148.0" text="群聊" />
                     </children>
                 </HBox>
                 <StackPane prefHeight="400.0" prefWidth="237.0">

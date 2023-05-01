@@ -5,6 +5,7 @@ import controller.PleaseProvideController;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.time.LocalDate;
+import java.util.List;
 
 
 public class User {
@@ -20,6 +21,15 @@ public class User {
     private LocalDate createdAt;
     private LocalDate updatedAt;
     private String password;
+    private List<User> friends;
+
+    public List<User> getFriends() {
+        return friends;
+    }
+
+    public void setFriends(List<User> friends) {
+        this.friends = friends;
+    }
 
 
     //检测聊天室主界面的头像变化

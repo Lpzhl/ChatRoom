@@ -12,7 +12,7 @@
     <children>
         <ImageView fx:id="avatar" fitHeight="278.0" fitWidth="239.0" layoutX="14.0" layoutY="17.0" pickOnBounds="true" preserveRatio="true" onMouseClicked="#avatarClicked">
             <image>
-                <Image url="@../image/裴.bmp" />
+                <Image url="@../image/默认头像.png" />
             </image>
         </ImageView>
         <Label layoutX="275.0" layoutY="35.0" prefHeight="49.0" prefWidth="69.0" text="昵称:">

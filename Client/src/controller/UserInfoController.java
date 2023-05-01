@@ -78,7 +78,6 @@ public class UserInfoController {
         setUserInfo(user);
     }
 
-
     @FXML
     void changePasswordButton1(ActionEvent event) throws IOException {
             String password = currentUser.getPassword();
@@ -102,9 +101,9 @@ public class UserInfoController {
             // 根据 user 的性别设置 sex Label 的文本
             //sex.setText(user.getGender() == "M" ? "男" : "女");
             if(user.getGender().equals("M")){
-                sex.setText("女生");
+                sex.setText("女");
             }else if(user.getGender().equals("F")){
-                sex.setText("男生");
+                sex.setText("男");
             }else{
                 sex.setText("未知");
             }

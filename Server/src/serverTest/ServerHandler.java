@@ -2,6 +2,7 @@ package serverTest;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 import server.User1;
 
 import java.io.BufferedReader;
@@ -11,6 +12,8 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 
@@ -28,7 +31,7 @@ public class ServerHandler implements Runnable {
     在ServerHandler的构造方法中创建一个新的DatabaseConnection对象，使得ServerHandler类可以在处理客户端请求时与数据库进行交互。
     例如，当客户端发送登录请求时，ServerHandler需要查询数据库以验证用户名和密码是否匹配。通过在ServerHandler类中创建一个DatabaseConnection对象
      */
-    public ServerHandler(Socket socket) {
+    public  ServerHandler(Socket socket) {
         this.socket = socket;// 保存客户端Socket到类成员变量中
         dbConnection = new DatabaseConnection();// 创建一个新的DatabaseConnection对象
     }
@@ -91,6 +94,16 @@ public class ServerHandler implements Runnable {
                     break;
                 case "FindPassword":
                     handleChangePassword(out,requestParts);
+                    break;
+                case "addFriend":
+                    handleAddFriend(out, requestParts1);
+                    break;
+                case "findUser":
+                    handleFindUser(out, requestParts);
+                    break;
+                case "getFriends":
+                    handleGetFriendsList(out, requestParts);
+                    break;
                 default:
                     out.println("error");
                     break;
@@ -118,6 +131,82 @@ public class ServerHandler implements Runnable {
             }
         }
 
+    }
+
+        // 该方法用于处理获取好友列表的请求
+    private void handleGetFriendsList(PrintWriter out, String[] requestParts) {
+        // 如果请求的格式不正确（即请求的部分不等于2），返回错误信息
+        if (requestParts.length != 2) {
+            out.println("error:invalid request format");
+            return;
+        }
+        // 将请求的第二部分转化为用户ID
+        int userId = Integer.parseInt(requestParts[1]);
+        System.out.println("用户ID："+userId);
+        // 通过用户ID从数据库中获取好友列表
+        List<User1> friends = dbConnection.getFriendsByUserId(userId);
+        // 遍历好友列表
+        for (User1 friend : friends) {
+            // 创建一个Gson对象，用于将User对象转化为JSON字符串
+            Gson gson = new Gson();
+            // 将好友对象序列化为JSON字符串
+            String friendJson = gson.toJson(friend);
+            System.out.println("序列化后好友信息："+friendJson);
+            // 将好友的JSON字符串发送给客户端
+            out.println(friendJson);
+        }
+    }
+    //处理查找好友
+    private void handleFindUser(PrintWriter out, String[] requestParts) {
+        if (requestParts.length != 2) {
+            out.println("error:invalid request format");
+            return;
+        }
+        // 从请求中获取用户名
+        String username = requestParts[1];
+        // 查找用户
+        User1 user = dbConnection.findUser(username);
+        if (user != null) {
+            // 将用户信息转换为JSON对象
+            Gson gson = new Gson();
+            String userJson = gson.toJson(user);
+            out.println("success:" + userJson);
+        } else {
+            out.println("error:user not found");
+        }
+    }
+
+    //处理添加好友
+    private void handleAddFriend(PrintWriter out, String[] requestParts) {
+        if (requestParts.length != 2) {
+            out.println("error:invalid request format"); // 如果请求格式不正确，则返回错误信息
+            return;
+        }
+        Gson gson = new Gson(); // 创建Gson对象，用于反序列化JSON字符串
+        Map<String, String> userInfo;
+        try {
+            userInfo = gson.fromJson(requestParts[1], new TypeToken<Map<String, String>>(){}.getType()); // 将JSON字符串反序列化为Map类型的对象
+            System.out.println("反序列化后: "+userInfo);
+        } catch (JsonSyntaxException e) {
+            out.println("error:invalid json"); // 如果JSON字符串格式不正确，则返回错误信息
+            return;
+        }
+        // 从JSON对象中获取用户名
+        String username1 = userInfo.get("username1");
+        System.out.println("用户1："+username1);
+        String username2 = userInfo.get("username2");
+        System.out.println("用户2："+username2);
+        if (username1 == null || username2 == null) {
+            out.println("error:missing username");
+            return;
+        }
+        // 向数据库添加新的好友关系
+        boolean isSuccess = dbConnection.addFriend(username1, username2);
+        if (isSuccess) {
+            out.println("success");
+        } else {
+            out.println("error:failed to add friend");
+        }
     }
 
     //处理修改密码
@@ -168,10 +257,16 @@ public class ServerHandler implements Runnable {
         String username = user.getUsername();
         System.out.println("请求者： "+username);
         String newAvatarPath = user.getAvatar();
+        /*if(newAvatarPath==null) {
+            newAvatarPath = "file:/image/默认头像.png";
+        }*/
         System.out.print("  头像："+newAvatarPath);
         String newNickname = user.getNickname();
         System.out.print("  昵称: "+newNickname);
         String newGender = user.getGender();
+        if("未知".equals(newGender)){
+            newGender = String.valueOf('O');
+        }
         System.out.print(" 性别: "+newGender);
         LocalDate newBirthday = user.getBirthday();
         System.out.print("  生日: "+newBirthday);
@@ -214,24 +309,38 @@ public class ServerHandler implements Runnable {
         }
     }
 
+    /**
+     * 处理用户登录请求的方法
+     * @param out 输出流，用于向客户端发送响应
+     * @param requestParts 请求参数数组，其中第二个元素应为用户名，第三个元素应为密码
+     */
     private void handleLogin(PrintWriter out, String[] requestParts) {
+        // 如果请求参数的数量不等于3，返回错误信息
         if (requestParts.length != 3) {
             out.println("error");
             return;
         }
+        // 获取用户名和密码
         String username = requestParts[1];
         String password = requestParts[2];
+        // 检查用户名和密码是否正确
         boolean loginSuccess = dbConnection.checkLogin(username, password);
         if (loginSuccess) {
+            // 如果用户名和密码正确，从数据库中获取用户信息
             User1 user1 = dbConnection.getUserByUsername(username);
+            System.out.println("从数据库中得到的用户信息: "+user1);
+            // 使用Gson将用户信息转换为JSON格式
             Gson gson = new Gson();
             String userJson = gson.toJson(user1);
-            System.out.println(userJson);
+            System.out.println("序列化后: "+userJson);
+            // 将成功的响应和用户信息发送给客户端
             out.println("success:" + userJson);
         } else {
+            // 如果用户名和密码不正确，发送失败的响应给客户端
             out.println("false:");
         }
     }
+
     // 处理登录请求
    /* private void handleLogin(PrintWriter out, String[] requestParts) {
         // 检查请求是否包含正确数量的参数
@@ -317,7 +426,14 @@ public class ServerHandler implements Runnable {
         String email = requestParts[1];
         // 如果邮箱和验证码匹配，返回"success"，否则返回"fail"
         if (dbConnection.emailExists(email)) {
-            out.println("success");
+            User1 user1 = dbConnection.getUserByEmail(email);
+            System.out.println("邮箱登录："+user1);
+
+            //序列化
+            Gson gson = new Gson();
+            String userJson = gson.toJson(user1);
+            System.out.println("序列化后: "+userJson);
+            out.println("success:"+userJson);
             System.out.println("登录成功");
         } else {
             out.println("fail");
