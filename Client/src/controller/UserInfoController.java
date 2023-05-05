@@ -100,9 +100,9 @@ public class UserInfoController {
             idLabel11.setText(user.getEmail());
             // 根据 user 的性别设置 sex Label 的文本
             //sex.setText(user.getGender() == "M" ? "男" : "女");
-            if(user.getGender().equals("M")){
+            if(user.getGender().equals("F")){
                 sex.setText("女");
-            }else if(user.getGender().equals("F")){
+            }else if(user.getGender().equals("M")){
                 sex.setText("男");
             }else{
                 sex.setText("未知");
@@ -112,6 +112,7 @@ public class UserInfoController {
             //String birthdayText = String.format("%d-%02d-%02d", birthdayObj.getYear(), birthdayObj.getMonth(), birthdayObj.getDay());
             birthday.setText(String.valueOf(birthdayObj));
             // 根据用户在线状态设置 onlineStatusLabel 的文本
+            System.out.println("用户现在的状态为："+user.getStatus());
             onlineStatusLabel.setText(user.getStatus().equals("online")?"在线" : "离线");
             // 设置用户头像 (确保 user 对象中有头像的URL)
             avatar.setImage(new Image(user.getAvatar()));

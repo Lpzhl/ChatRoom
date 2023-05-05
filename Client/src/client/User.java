@@ -1,6 +1,6 @@
 package client;
 
-import controller.PleaseProvideController;
+import controller.ChatRoomController;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -32,35 +32,42 @@ public class User {
     }
 
 
-    //检测聊天室主界面的头像变化
-    private transient PleaseProvideController mainController;
+    //检测聊天室主界面的头像变化   transient表示不序列化
+    private transient ChatRoomController mainController;
 
-    public void setMainController(PleaseProvideController mainController) {
+    //定义一个setMainController方法，用于mainController赋值。
+    public void setMainController(ChatRoomController mainController) {
         this.mainController = mainController;
     }
+
+    //它是一个PropertyChangeSupport类型的对象，用于管理属性更改事件的监听器。
     public User() {
         support = new PropertyChangeSupport(this);
     }
 
+    //用于管理属性更改事件的监听器
     private transient PropertyChangeSupport support = new PropertyChangeSupport(this);
 
 
-
+  //用于修改用户头像。当头像发生变化时，会通知mainController更新界面，顺便把头像也改了。
     public void setAvatar(String avatar) {
         String oldAvatar = this.avatar;
         this.avatar = avatar;
         if (mainController != null) {
-            mainController.updateHomeScreenAvatar(avatar);
+            mainController.updateHomeScreenAvatar(avatar);//把主界面改了
         }
         support.firePropertyChange("avatar", oldAvatar, avatar);
     }
 
+    //定义两个方法，addPropertyChangeListener和removePropertyChangeListener，分别用于添加和删除属性更改事件监听器。
     public void addPropertyChangeListener(PropertyChangeListener pcl) {
-        support.addPropertyChangeListener(pcl);
+        support.addPropertyChangeListener(pcl);//将传入的监听器pcl添加到support对象的监听器列表中。这样，当属性发生更改时，会通知所有已注册的监听器
     }
     public void removePropertyChangeListener(PropertyChangeListener pcl) {
         support.removePropertyChangeListener(pcl);
     }
+
+    //下面都是监听
     public void setNickname(String nickname) {
         String oldNickname = this.nickname;
         this.nickname = nickname;

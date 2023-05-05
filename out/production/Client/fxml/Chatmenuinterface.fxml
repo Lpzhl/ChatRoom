@@ -10,87 +10,150 @@
 <?import javafx.scene.shape.Circle?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.PleaseProvideController">
-    <left>
-        <!-- 左侧列 -->
-        <VBox alignment="CENTER" fillWidth="true" spacing="10" style="-fx-background-color: #A9A9A9;">
+<BorderPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.ChatRoomController">
+    <top>
+        <AnchorPane prefHeight="12.0" prefWidth="1060.0">
             <children>
-                <HBox alignment="CENTER" prefHeight="121.0" prefWidth="163.0">
-                    <children>
-                        <StackPane>
-                            <children>
-                                <ToggleButton fx:id="HeadPicture" onAction="#HeadPicture1" prefHeight="152.0" prefWidth="147.0" style="-fx-background-color: #A9A9A9;">
-                           <graphic>
-                              <ImageView fx:id="HomeScreenAvatar" fitHeight="109.0" fitWidth="142.0" pickOnBounds="true" preserveRatio="true">
-                                 <image>
-                                    <Image url="@../image/默认头像.png" />
-                                 </image></ImageView>
-                           </graphic></ToggleButton>
-                            </children>
-                        </StackPane>
-                        <Circle fx:id="onlineStatusIndicator" fill="white" radius="15.0" />
-                    </children>
-                </HBox>
-                <ToggleButton fx:id="message" onAction="#message1" prefHeight="156.0" prefWidth="168.0" style="-fx-background-color: #A9A9A9;">
-                    <graphic>
-                        <ImageView fitHeight="96.0" fitWidth="100.0">
-                            <image>
-                                <Image url="@../image/消息.png" />
-                            </image>
-                        </ImageView>
-                    </graphic>
-                </ToggleButton>
-                <ToggleButton fx:id="friendsButton" onAction="#friendsButton1" prefHeight="137.0" prefWidth="143.0" style="-fx-background-color: #A9A9A9;">
-                    <graphic>
-                        <ImageView fx:id="Goodfriend" fitHeight="92.0" fitWidth="77.0">
-                            <image>
-                                <Image url="@../image/好友.png" />
-                            </image>
-                        </ImageView>
-                    </graphic>
-                </ToggleButton>
-            <ToggleButton fx:id="RequestisLt" mnemonicParsing="false" onAction="#RequestisLt1" prefHeight="125.0" prefWidth="145.0" text="请求消息" />
-                <Region VBox.vgrow="ALWAYS" />
-                <Button fx:id="exitButton" onAction="#GoHome" prefHeight="59.0" prefWidth="110.0" text="退出">
-                    <font>
-                        <Font size="23.0" />
-                    </font></Button>
-            </children>
-        </VBox>
-    </left>
-    <center>
-        <VBox prefHeight="682.0" prefWidth="322.0">
-            <children>
-                <HBox fx:id="searchAndAddBox" spacing="5">
-                    <children>
-                        <TextField fx:id="searchField" onAction="#searchField1" prefHeight="57.0" prefWidth="249.0" promptText="搜索好友或群聊" HBox.hgrow="ALWAYS" />
-                        <Button fx:id="addButton" onAction="#addButton1" prefHeight="54.0" prefWidth="68.0" text="添加" />
-                    </children>
-                </HBox>
-                <HBox fx:id="friendsAndGroupChatsButtonsBox" prefHeight="36.0" prefWidth="296.0" spacing="10" visible="false">
-                    <children>
-                        <ToggleButton fx:id="friendsTabButton" maxWidth="200" minWidth="100" onAction="#FriendsTab" prefHeight="36.0" prefWidth="147.0" text="好友" />
-                        <ToggleButton fx:id="groupChatsTabButton" maxWidth="200" minWidth="100" onAction="#GroupsTab" prefHeight="36.0" prefWidth="148.0" text="群聊" />
-                    </children>
-                </HBox>
-                <StackPane prefHeight="400.0" prefWidth="237.0">
-                    <children>
-                        <ListView fx:id="groupChatsListView" visible="false" />
-                        <ListView fx:id="friendsListView" visible="false" />
-                        <ListView fx:id="messagesListView" visible="false" />
-                    </children>
-                </StackPane>
-            </children>
-        </VBox>
-    </center>
-    <right>
-        <!-- 右侧列 -->
-        <AnchorPane prefHeight="527.0" prefWidth="595.0">
-            <children>
-            <ListView fx:id="ChatRecord" prefHeight="477.0" prefWidth="595.0" />
-                <TextField fx:id="messageInput" layoutY="474.0" prefHeight="212.0" prefWidth="594.0" AnchorPane.bottomAnchor="-2.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="1.0" />
-                <Button fx:id="sendButton" layoutX="482.0" layoutY="611.0" prefHeight="55.0" prefWidth="98.0" text="发送" AnchorPane.bottomAnchor="21.0" AnchorPane.rightAnchor="15.0" />
+                <ToggleButton fx:id="pinToggleButton" onAction="#togglePin" opacity="0.21" prefHeight="38.0" prefWidth="1060.0" style="-fx-background-color: #FFFFFF;" text="置顶" AnchorPane.bottomAnchor="-2.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
             </children>
         </AnchorPane>
-    </right>
+    </top>
+    <center>
+        <HBox>
+           <children>
+               <!-- 左侧列 -->
+               <AnchorPane prefHeight="682.0" prefWidth="142.0">
+                  <children>
+                      <VBox alignment="CENTER" fillWidth="true" maxWidth="142.0" minWidth="142.0" prefHeight="682.0" prefWidth="142.0" spacing="10" style="-fx-background-color: #75FA8D;" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                          <children>
+                              <HBox alignment="CENTER" prefHeight="128.0" prefWidth="139.0">
+                                  <children>
+                                      <ToggleButton fx:id="HeadPicture" onAction="#HeadPicture1" prefHeight="104.0" prefWidth="114.0" style="-fx-background-color: transparent;">
+                                 <graphic>
+                                              <ImageView fx:id="HomeScreenAvatar" fitHeight="104.0" fitWidth="100.0" pickOnBounds="true" preserveRatio="true">
+                                                  <image>
+                                                      <Image url="@../image/默认头像.png" />
+                                                  </image>
+                                              </ImageView>
+                                 </graphic></ToggleButton>
+                                  </children>
+                              </HBox>
+                              <ToggleButton fx:id="message" onAction="#message1" prefHeight="114.0" prefWidth="114.0" style="-fx-background-color: transparent;">
+                                  <graphic>
+                                      <ImageView fx:id="Message" fitHeight="89.0" fitWidth="91.0">
+                                          <image>
+                                              <Image url="@../image/消息2.png" />
+                                          </image>
+                                      </ImageView>
+                                  </graphic>
+                              </ToggleButton>
+                              <ToggleButton fx:id="friendsButton" onAction="#friendsButton1" prefHeight="95.0" prefWidth="118.0" style="-fx-background-color: transparent;">
+                                  <graphic>
+                                      <ImageView fx:id="Goodfriend" fitHeight="86.0" fitWidth="80.0">
+                                          <image>
+                                              <Image url="@../image/好友.png" />
+                                          </image>
+                                      </ImageView>
+                                  </graphic>
+                              </ToggleButton>
+                              <ToggleButton fx:id="RequestisLt" mnemonicParsing="false" onAction="#RequestisLt1" prefHeight="137.0" prefWidth="114.0" style="-fx-background-color: transparent;">
+                                  <font>
+                                      <Font size="25.0" />
+                                  </font>
+                                  <graphic>
+                                      <ImageView fx:id="Requestpicture" fitHeight="96.0" fitWidth="85.0" pickOnBounds="true" preserveRatio="true">
+                                          <image>
+                                              <Image url="@../image/服务请求.png" />
+                                          </image>
+                                      </ImageView>
+                                  </graphic>
+                              </ToggleButton>
+                                <Circle fx:id="RequestPrompt" fill="white" opacity="0.0" radius="12.0" />
+                        <Circle fx:id="Message2" fill="white" layoutX="81.0" layoutY="535.0" opacity="0.0" radius="12.0" />
+                        <Circle fx:id="onlineStatusIndicator11" fill="white" layoutX="81.0" layoutY="569.0" opacity="0.0" radius="12.0" />
+                              <Region VBox.vgrow="ALWAYS" />
+                              <Button fx:id="exitButton" onAction="#GoHome" prefHeight="59.0" prefWidth="110.0" style="-fx-background-color: transparent;">
+                                  <font>
+                                      <Font size="23.0" />
+                                  </font>
+                           <graphic>
+                              <ImageView fitHeight="48.0" fitWidth="42.0" pickOnBounds="true" preserveRatio="true">
+                                 <image>
+                                    <Image url="@../image/退出.png" />
+                                 </image>
+                              </ImageView>
+                           </graphic>
+                              </Button>
+                          </children>
+                      </VBox>
+                  </children>
+               </AnchorPane>
+               <!-- 中间列 -->
+               <AnchorPane maxHeight="Infinity" maxWidth="322.0" minWidth="322.0" prefHeight="801.0" prefWidth="322.0">
+                   <children>
+                       <HBox fx:id="searchAndAddBox" spacing="5" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                           <children>
+                               <TextField fx:id="searchField" onAction="#searchField1" prefHeight="49.0" prefWidth="169.0" promptText="搜索好友或群聊" HBox.hgrow="ALWAYS" />
+                               <Button mnemonicParsing="false" prefHeight="53.0" prefWidth="74.0" style="-fx-background-color: transparent;" text="🔍">
+                           <font>
+                              <Font size="27.0" />
+                           </font></Button>
+                               <Button fx:id="addButton" onAction="#addButton1" prefHeight="51.0" prefWidth="98.0" style="-fx-background-color: transparent;" text="➕">
+                           <font>
+                              <Font name="System Bold" size="22.0" />
+                           </font></Button>
+                           </children>
+                       </HBox>
+                       <HBox fx:id="friendsAndGroupChatsButtonsBox" layoutY="48.0" prefHeight="47.0" prefWidth="327.0" spacing="10" visible="false" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="-5.0" AnchorPane.topAnchor="48.0">
+                           <children>
+                               <ToggleButton fx:id="friendsTabButton" maxWidth="200" minWidth="100" onAction="#FriendsTab" prefHeight="49.0" prefWidth="147.0" style="-fx-background-color: transparent;">
+                           <font>
+                              <Font size="20.0" />
+                           </font>
+                           <graphic>
+                              <Label fx:id="FriendChat" prefHeight="37.0" prefWidth="61.0" text="好友">
+                                 <font>
+                                    <Font size="26.0" />
+                                 </font>
+                              </Label>
+                           </graphic>
+                        </ToggleButton>
+                               <ToggleButton fx:id="groupChatsTabButton" maxWidth="200" minWidth="100" onAction="#GroupsTab" prefHeight="50.0" prefWidth="168.0" style="-fx-background-color: transparent;">
+                           <font>
+                              <Font size="20.0" />
+                           </font>
+                           <graphic>
+                              <Label fx:id="GroupChat" prefHeight="37.0" prefWidth="61.0" text="群聊">
+                                 <font>
+                                    <Font size="26.0" />
+                                 </font>
+                              </Label>
+                           </graphic></ToggleButton>
+                           </children>
+                       </HBox>
+                       <StackPane prefHeight="589.0" prefWidth="322.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="93.0">
+                           <children>
+                               <ListView fx:id="groupChatsListView" visible="false" />
+                               <ListView fx:id="friendsListView" prefHeight="449.0" prefWidth="322.0" visible="false" />
+                               <ListView fx:id="messagesListView" visible="false" />
+                               <ListView fx:id="messagesListView1" prefHeight="688.0" prefWidth="322.0" />
+                           </children>
+                       </StackPane>
+                   </children>
+               </AnchorPane>
+               <!-- 右侧列 -->
+                <AnchorPane prefHeight="682.0" HBox.hgrow="ALWAYS">
+               <children>
+                   <ListView fx:id="ChatRecord" layoutX="1.0" prefHeight="596.0" prefWidth="594.0" AnchorPane.bottomAnchor="205.0" AnchorPane.leftAnchor="1.0" AnchorPane.rightAnchor="1.0" AnchorPane.topAnchor="0.0" />
+                   <TextField fx:id="messageInput" layoutY="474.0" prefHeight="212.0" prefWidth="594.0" AnchorPane.bottomAnchor="-2.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="1.0" />
+                   <Button fx:id="sendButton" layoutX="482.0" layoutY="611.0" opacity="0.74" prefHeight="40.0" prefWidth="123.0" text="发送" AnchorPane.bottomAnchor="21.0" AnchorPane.rightAnchor="15.0" />
+                   <Label layoutX="223.0" layoutY="6.0" prefHeight="42.0" prefWidth="182.0" text="用户名">
+                     <font>
+                        <Font size="21.0" />
+                     </font></Label>
+               </children>
+           </AnchorPane>
+           </children>
+        </HBox>
+    </center>
 </BorderPane>

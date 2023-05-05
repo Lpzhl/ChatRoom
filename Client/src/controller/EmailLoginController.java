@@ -25,7 +25,7 @@ import java.util.Map;
 import javafx.stage.Stage;
 import javafx.util.Pair;
 
-import static java.lang.System.out;
+import javax.swing.text.AsyncBoxView;
 
 public class EmailLoginController {
 
@@ -64,9 +64,11 @@ public class EmailLoginController {
 
 
 
+    // 向服务器端发送获取验证码请求
     @FXML
     void Getverificationcode1(ActionEvent event) {
         String email = Mailboxnumber.getText();
+        // 首先判断QQ邮箱是否有效
         if (EmailUtil.isValidEmail(email)) {
             try (Socket socket = new Socket("127.0.0.1", 6000);
                  //字符打印流
@@ -78,16 +80,18 @@ public class EmailLoginController {
 
                 // 从服务端接收响应
                 String response = in.readLine();
+                //看看验证码长度是否为6
                 if (response.length() == 6) {
-                    serverGeneratedCode = response;
+                    serverGeneratedCode = response;//把服务端发送的验证码获取
                     // 添加生成的验证码和过期时间到映射中
                     System.out.println(serverGeneratedCode);
                     // 添加生成的验证码和过期时间到映射中
                     System.out.println("发送邮件的时间为"+LocalDateTime.now());
                     System.out.println("过期的时间为"+ LocalDateTime.now().plusMinutes(EmailUtil.CODE_VALIDITY_MINUTES));
+                    // 将生成的验证码和过期时间映射进去
                     generatedCodes.put(email, new Pair<>(serverGeneratedCode, LocalDateTime.now().plusMinutes(EmailUtil.CODE_VALIDITY_MINUTES)));
 
-                    // 开始倒计时
+                    // 发送之后 开始倒计时
                     EmailUtil.startCountdown(Getverificationcode);
                 } else {
                     showAlert(Alert.AlertType.ERROR, "错误", "验证码发送失败，请稍后重试");
@@ -106,9 +110,11 @@ public class EmailLoginController {
     }
 
 
+    //邮箱登录
     @FXML
     void Login1(ActionEvent event) {
         User user = null;
+        // 获取用户输入的邮箱号 以及输入的验证码
         String email = Mailboxnumber.getText();
         String verificationCode = Verificationcode.getText();
 
@@ -122,13 +128,14 @@ public class EmailLoginController {
         }
         if (!EmailUtil.isValidEmail(email)) {
             System.out.println("Invalid email");
-            showAlert(Alert.AlertType.ERROR, "错误", "无效的电子邮件地址");
+            showAlert(Alert.AlertType.ERROR, "错误", "无效的QQ邮箱");
             return;
         }
 
-        // 检查验证码是否正确
-        System.out.println("Generated codes: " + generatedCodes);
+        // 向服务端发送 检查验证码是否正确的请求
+        System.out.println("Generated codes: " + generatedCodes);//Generated codes: {2212384795@qq.com=156001=2023-05-03T15:16:34.785}
 
+        //验证验证码是否有效
         if (EmailUtil.isCodeValid(email, verificationCode, generatedCodes)) {
             // 验证码正确，检查邮箱是否存在于数据库中
             try (Socket socket = new Socket("127.0.0.1", 6000);
@@ -148,7 +155,7 @@ public class EmailLoginController {
                     showAlert(Alert.AlertType.INFORMATION, "成功", "登录成功");
                     FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/Chatmenuinterface.fxml"));
                     Parent root = fxmlLoader.load();
-                    PleaseProvideController chatController = fxmlLoader.getController();
+                    ChatRoomController chatController = fxmlLoader.getController();
                     chatController.setCurrentUser(user);
                     chatController.updateHomeScreenAvatar(user.getAvatar());
                     Scene scene = new Scene(root);
@@ -159,8 +166,15 @@ public class EmailLoginController {
                     stage.show();
                     stage1.close();
                     //跳转 聊天室界面
-                } else {
-                    showAlert(Alert.AlertType.ERROR, "错误", "该邮箱未绑定QQ号，登录失败");
+                } else if ("error".equals(resposeParts[0])) {
+                    System.out.println("登入回到的信息："+resposeParts[1]);
+                    if ("该用户已经登录".equals(resposeParts[1])) {
+                        // 在这里处理 "用户已登录" 错误
+                        showAlert(Alert.AlertType.ERROR, "错误", "该用户已经登录");
+                    }
+                }
+                else {
+                    showAlert(Alert.AlertType.ERROR, "错误", "该邮箱未注册ID号，登录失败");
                 }
 
             } catch (IOException e) {

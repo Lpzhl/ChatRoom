@@ -104,7 +104,6 @@ public class RegisterController {
             try (Socket socket = new Socket("127.0.0.1", 6000);
                  PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                  BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-
                 // 向服务端请求发送验证码
                 out.println("email_verification:" + emailAddress);
 
@@ -142,19 +141,44 @@ public class RegisterController {
 
     @FXML
 // 在 RegisterController 类中的 register() 方法中，使用 Socket 连接服务端
-    private void Register1() {
+    private void Register1() throws IOException {
         String email = Email.getText().trim();
         String userNameInput = nickname.getText().trim(); // 修改变量名称
         String password = userpassword.getText().trim();
         String confirmPassword = userpassword1.getText().trim();
         String verificationCode = PutCode.getText().trim();
-        long snowflakeId = snowflakeIdWorker.nextId();
-        String username = String.format("%010d", snowflakeId % 10000000000L);//雪花算法生成的ID
+        //注意判重
+        boolean flag;
+        String username;//雪花算法生成的ID
+        while (true) {
+            long snowflakeId = snowflakeIdWorker.nextId();
+            username = String.format("%010d", snowflakeId % 10000000000L); //雪花算法生成的ID
+            flag = false;
 
+            try (Socket socket = new Socket("127.0.0.1", 6000);
+                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+                //查询是否相同
+                out.println("findDup:" + username);
+
+                String response = in.readLine();
+                if ("success".equals(response)) {
+                    break;
+                } else {
+                    flag = true;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         System.out.println();
         System.out.println("雪花算法生成的ID："+username);
         if (!isValidPassword(password)) {
             showAlert(Alert.AlertType.ERROR, "错误", "密码必须包含英文字母和数字，长度在8-18之间");
+            return;
+        }
+        if(!isValidUserName(userNameInput)){
+            showAlert(Alert.AlertType.ERROR,"错误","用户名允许包含字母、数字，长度为3-18");
             return;
         }
         if (email.isEmpty() || userNameInput.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() || verificationCode.isEmpty()) {
@@ -282,6 +306,12 @@ public class RegisterController {
         passwordVisible = !passwordVisible;
     }
 
+    //验证用户名是否正确
+    private boolean isValidUserName(String username){
+        return username.matches("^[\u4e00-\u9fa5\\d]{3,18}$");
+    }
+
+    //判断密码是否合格
     private boolean isValidPassword(String password) {
         return password.matches("(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,18}");
     }

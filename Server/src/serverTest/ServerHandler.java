@@ -3,6 +3,7 @@ package serverTest;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
+import server.Group1;
 import server.User1;
 
 import java.io.BufferedReader;
@@ -12,6 +13,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -67,6 +69,8 @@ public class ServerHandler implements Runnable {
             String[] requestParts1=request.split(":",2);
             String[] requestParts = request.split(":");
 
+            //System.out.println(requestParts[0]+"你好"+requestParts[1]);
+            System.out.println(requestParts[0]);
             //if(requestParts[0])
 
             // 根据请求的第一个部分，判断是哪种请求并执行相应操作
@@ -77,6 +81,16 @@ public class ServerHandler implements Runnable {
                 case "login"://处理登入的请求
                     handleLogin(out, requestParts);
                     break;
+                case "findDup": // 处理注册生成的ID是否重复
+                    handlefinDup(out,requestParts[1]);
+                    break;
+                case "findDup1": // 处理注册生成的ID是否重复
+                    handlefinDup1(out,requestParts[1]);
+                    break;
+                case "logout":// 处理用户退出登入请求
+                    System.out.println("退出用户："+requestParts[1]);
+                    handleLogout(requestParts[1]);
+                    break;
                 case "email_verification"://发送验证码请求
                     handleEmailVerification(out, requestParts);
                     break;
@@ -86,23 +100,45 @@ public class ServerHandler implements Runnable {
                 case"resetPassword"://处理找回密码的请求
                     handleResetPassword(out,requestParts);
                     break;
-                case "update":
+                case "update": // 处理更新用户信息请求
                     handleUpdate(out, requestParts1);
                     break;
-                case "getUserInfo":
+                case "getUserInfo": // 处理查询用户信息请求
                     handleGetUserInfo(out, requestParts);
                     break;
-                case "FindPassword":
+                case "FindPassword":  // 处理找回密码请求
                     handleChangePassword(out,requestParts);
                     break;
-                case "addFriend":
-                    handleAddFriend(out, requestParts1);
+                case  "sendFriendRequest": // 处理获取好友列表请求
+                    handleSendFriendRequest(out,requestParts1);
                     break;
-                case "findUser":
+                case "getRequestList": // 处理获取请求列表请求
+                    handleGetRequestList(out, requestParts[1]);
+                    break;
+                case "acceptFriendRequest":// 处理接收好友申请请求
+                    handleAcceptFriendRequest(out, requestParts1[1]);
+                    break;
+                case "deleteFriend":// 处理删除好友请求
+                    handleDeleteFriendRequest(out, requestParts1[1]);
+                    break;
+                case "rejectFriendRequest":// 处理拒绝好友请求
+                    handleRejectFriendRequest(out, requestParts1[1]);
+                    break;
+                /*case "addFriend":
+                    handleAddFriend(out, requestParts1);
+                    break;*/
+                case "findUser":// 处理查看好友列表请求
                     handleFindUser(out, requestParts);
                     break;
-                case "getFriends":
+                case "getFriends":// 处理查找好友请求
                     handleGetFriendsList(out, requestParts);
+                    break;
+                case "createGroup":// 处理创建群聊的请求
+                    handleCreateGroup(out,requestParts1[1]);
+                    break;
+                case "getGroups":// 处理查看群聊列表请求
+                    System.out.println("查看群聊："+requestParts1[1]);
+                    handleGetGroupsRequest(out, requestParts1[1]);
                     break;
                 default:
                     out.println("error");
@@ -113,17 +149,20 @@ public class ServerHandler implements Runnable {
         } finally {
             // 关闭输出流
             if (out != null) {
+                System.out.println(socket+"断开连接");
                 out.close();
             }
             // 关闭输入流
             if (in != null) {
                 try {
+                    System.out.println(socket+"断开连接");
                     in.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
             try {
+                System.out.println(socket+"断开连接");
                 // 关闭套接字
                 socket.close();
             } catch (IOException e) {
@@ -133,6 +172,298 @@ public class ServerHandler implements Runnable {
 
     }
 
+    // 处理雪花算法群账号的唯一性
+    private void handlefinDup1(PrintWriter out, String requestPart) {
+        String username = requestPart;
+        boolean register = dbConnection.GroupUserExists(username);
+        if(register){
+            out.println("false");
+        }else {
+            out.println("success");
+        }
+    }
+
+    //处理雪花算法账号的唯一性
+    private void handlefinDup(PrintWriter out, String requestPart) {
+        String username = requestPart;
+        boolean register = dbConnection.userExists(username);
+        if(register){
+            out.println("false");
+        }else {
+            out.println("success");
+        }
+    }
+
+    private void handleGetGroupsRequest(PrintWriter out, String request) {
+        // 从请求中获取用户ID
+        System.out.println("这是啥:"+request);
+
+        // 将请求字符串转换为整数
+        int userId;
+        try {
+            userId = Integer.parseInt(request);
+        } catch (NumberFormatException e) {
+            System.err.println("请求的格式不正确，应该是一个整数的用户ID，但收到的是: " + request);
+            return;
+        }
+
+        System.out.println("查看群聊列表用户id："+userId);
+
+        // 从数据库获取用户的群聊列表
+        List<Group1> groupList = dbConnection.getGroupsByUserId(userId);
+
+        // 创建一个Gson对象，用于将Group对象转换为Json字符串
+        Gson gson = new Gson();
+
+        // 遍历群聊列表，将每个Group对象转换为Json字符串，并发送给客户端
+        for (Group1 group : groupList) {
+            String groupJson = gson.toJson(group);
+            System.out.println("序列化后："+group);
+            out.println(groupJson);
+        }
+
+        // 发送一个空行，表示群聊列表已经发送完毕
+        out.println();
+    }
+
+
+    private void handleCreateGroup(PrintWriter out, String request) {
+        System.out.println("服务端接收的群聊信息："+request);
+        Gson gson = new Gson();
+        Group1 group = gson.fromJson(request, Group1.class);
+        System.out.println("反序列化后："+group);
+        boolean result = dbConnection.createGroup(group,group.getCreatedBy());
+        if (result) {
+            out.println("success");
+        } else {
+            out.println("failure");
+        }
+    }
+
+    //处理删除好友的请求
+    private void handleDeleteFriendRequest(PrintWriter out, String request) {
+        Gson gson = new Gson();
+        Map<String, String> requestMap = gson.fromJson(request, new TypeToken<Map<String, String>>() {}.getType());
+        String username1 = requestMap.get("username1");
+        String username2 = requestMap.get("username2");
+        if (username1 == null || username2 == null) {
+            out.println("error:missing username");
+            return;
+        }
+        boolean success = dbConnection.deleteFriend(username1, username2);
+        if (success) {
+            out.println("success");
+        } else {
+            out.println("failure");
+        }
+    }
+    private synchronized void handleLogin(PrintWriter out, String[] requestParts) {
+        // 如果请求参数的数量不等于3，返回错误信息
+        if (requestParts.length != 3) {
+            out.println("error");
+            return;
+        }
+
+        // 获取用户名和密码
+        String username = requestParts[1];
+        String password = requestParts[2];
+
+        // 检查用户名和密码是否正确
+        boolean loginSuccess = dbConnection.checkLogin(username, password);
+
+        if (loginSuccess) {
+
+            // 判断该用户是否已经在线
+            String status = dbConnection.getUserStatus(username);
+            if (status.equals("online")) {
+                out.println("error:该用户已经登录");
+                System.out.println("该用户状态："+status);
+                return;
+            }
+            // 设置用户状态为在线
+            dbConnection.setUserStatus(username, "online");
+            // 如果用户名和密码正确，从数据库中获取用户信息
+            User1 user1 = dbConnection.getUserByUsername(username);
+
+            // 使用Gson将用户信息转换为JSON格式
+            Gson gson = new Gson();
+            String userJson = gson.toJson(user1);
+           System.out.println("用户在线信息："+userJson);
+            // 将成功的响应和用户信息发送给客户端
+            out.println("success:" + userJson);
+        } else {
+            // 如果用户名和密码不正确，发送失败的响应给客户端
+            out.println("error:用户名或密码错误");
+        }
+    }
+
+
+    private synchronized void handleLogout(String username) {
+        // 设置用户状态为离线
+        dbConnection.setUserStatus(username, "offline");
+        System.out.println("用户：" + username + "退出登录");
+    }
+
+
+   /* private List<User1> onlineUsers = new ArrayList<>();
+
+    /**
+     * 处理用户登录请求的方法
+     * @param out 输出流，用于向客户端发送响应
+     * @param requestParts 请求参数数组，其中第二个元素应为用户名，第三个元素应为密码
+     */
+    /*private synchronized void handleLogin(PrintWriter out, String[] requestParts) {
+        // 如果请求参数的数量不等于3，返回错误信息
+        if (requestParts.length != 3) {
+            out.println("error");
+            return;
+        }
+
+        // 获取用户名和密码
+        String username = requestParts[1];
+        String password = requestParts[2];
+
+        // 检查用户名和密码是否正确
+        boolean loginSuccess = dbConnection.checkLogin(username, password);
+
+        if (loginSuccess) {
+            // 如果用户名和密码正确，从数据库中获取用户信息
+            User1 user1 = dbConnection.getUserByUsername(username);
+
+            // 判断该用户是否已经在在线用户列表中
+            boolean isAlreadyOnline = false;
+            for (User1 onlineUser : onlineUsers) {
+                if (onlineUser.getUsername().equals(username)) {
+                    isAlreadyOnline = true;
+                    break;
+                }
+            }
+            if (isAlreadyOnline) {
+                out.println("error:该用户已经登录");
+                return;
+            }
+
+            // 添加该用户到在线用户列表中
+            onlineUsers.add(user1);
+
+            // 使用Gson将用户信息转换为JSON格式
+            Gson gson = new Gson();
+            String userJson = gson.toJson(user1);
+
+            // 将成功的响应和用户信息发送给客户端
+            out.println("success:" + userJson);
+        } else {
+            // 如果用户名和密码不正确，发送失败的响应给客户端
+            out.println("error:用户名或密码错误");
+        }
+    }*/
+
+
+    /**
+     * 处理用户退出登录请求的方法
+     * @param username 用户名
+     */
+    /*private synchronized void handleLogout(String username) {
+        // 从在线用户列表中删除该用户
+        for (int i = 0; i < onlineUsers.size(); i++) {
+            if (onlineUsers.get(i).getUsername().equals(username)) {
+                onlineUsers.remove(i);
+                System.out.println("用户："+username+"退出登入");
+                break;
+            }
+        }
+    }*/
+
+
+    // 处理登录请求
+   /* private void handleLogin(PrintWriter out, String[] requestParts) {
+        // 检查请求是否包含正确数量的参数
+        if (requestParts.length != 3) {
+            out.println("error");
+            return;
+        }
+
+        String username = requestParts[1];
+        String password = requestParts[2];
+
+        // 如果用户名和密码匹配，返回"success"，否则返回"fail"
+        if (dbConnection.checkLogin(username, password)) {
+            out.println("success");
+            System.out.println("登入成功  密码是："+password);
+        } else {
+            out.println("fail");
+            System.out.println("密码错误："+password);
+        }
+    }*/
+
+
+    private void handleGetRequestList(PrintWriter out, String username) {
+        System.out.println("用户的信息列表："+username);
+        List<String> requestList = dbConnection.getRequestList(username);
+        Gson gson = new Gson();
+        String response = gson.toJson(requestList);
+        System.out.println("信息列表序列化后："+response);
+        out.println(response);
+    }
+
+    private void handleAcceptFriendRequest(PrintWriter out, String request) {
+        Gson gson = new Gson();
+        Map<String, String> requestMap = gson.fromJson(request, new TypeToken<Map<String, String>>() {}.getType());
+        String username1 = requestMap.get("username1");
+        String username2 = requestMap.get("username2");
+        if (username1 == null || username2 == null) {
+            out.println("error:missing username");
+            return;
+        }
+        Boolean success1 = dbConnection.updateFriendRequestStatus(username1,username2, "accepted");
+        System.out.println("success1:"+success1);
+        boolean success = dbConnection.addFriend(username1, username2);
+        if(success&&success1){
+            out.println("success");
+        }else{
+            out.println("failure");
+        }
+    }
+
+    private void handleRejectFriendRequest(PrintWriter out, String request) {
+        Gson gson = new Gson();
+        Map<String, String> requestMap = gson.fromJson(request, new TypeToken<Map<String, String>>() {}.getType());
+        boolean success = dbConnection.updateFriendRequestStatus(requestMap.get("username1"), requestMap.get("username2"), "rejected");
+        out.println(success ? "success" : "failure");
+    }
+    // 处理发送好友请求
+    private void handleSendFriendRequest(PrintWriter out, String[] requestParts) {
+        if (requestParts.length != 2) {
+            out.println("error:invalid request format");
+            return;
+        }
+        Gson gson = new Gson();
+        Map<String, String> userInfo;
+        try {
+            userInfo = gson.fromJson(requestParts[1], new TypeToken<Map<String, String>>(){}.getType());
+            System.out.println("反序列化后: "+userInfo);
+        } catch (JsonSyntaxException e) {
+            out.println("error:invalid json");
+            return;
+        }
+        String senderUsername = userInfo.get("username1");
+        String receiverUsername = userInfo.get("username2");
+
+        if (senderUsername == null || receiverUsername == null) {
+            out.println("error:missing username");
+            return;
+        }
+        if (!dbConnection.canAddFriend(senderUsername, receiverUsername)) {
+            out.println("error:cannot send friend request");
+            return;
+        }
+        boolean isSuccess = dbConnection.sendFriendRequest(senderUsername, receiverUsername);
+        if (isSuccess) {
+            out.println("success");
+        } else {
+            out.println("error:failed to send friend request");
+        }
+    }
         // 该方法用于处理获取好友列表的请求
     private void handleGetFriendsList(PrintWriter out, String[] requestParts) {
         // 如果请求的格式不正确（即请求的部分不等于2），返回错误信息
@@ -176,7 +507,7 @@ public class ServerHandler implements Runnable {
         }
     }
 
-    //处理添加好友
+   /* //处理添加好友
     private void handleAddFriend(PrintWriter out, String[] requestParts) {
         if (requestParts.length != 2) {
             out.println("error:invalid request format"); // 如果请求格式不正确，则返回错误信息
@@ -207,7 +538,7 @@ public class ServerHandler implements Runnable {
         } else {
             out.println("error:failed to add friend");
         }
-    }
+    }*/
 
     //处理修改密码
     private void handleChangePassword(PrintWriter out, String[] requestParts) {
@@ -232,12 +563,14 @@ public class ServerHandler implements Runnable {
         }
         String username = requestParts[1];
         User1 user = dbConnection.getUserInfo(username);
+        System.out.println("请求用户名看信息："+user);
         if (user == null) {
             out.println("error");
         } else {
             Gson gson = new Gson();
             String response = gson.toJson(user);
             out.println(response);
+            System.out.println("给你啦："+response);
         }
     }
     //处理编辑资料
@@ -297,71 +630,19 @@ public class ServerHandler implements Runnable {
         String password= requestParts[2];
         String email= requestParts[3];
         String nickname= requestParts[4];
-        System.out.println(email+" "+nickname+" "+password+""+username);
+        System.out.println("注册信息："+"邮箱号："+email+" "+"用户名："+nickname+" "+"账号："+username+" 密码："+password);
+        String avatar = "/image/默认头像.png";
+        String signature = "这个人很懒什么都没有了留下~";
 
 
         // 如果用户名已存在，返回"duplicate"，否则注册用户并返回"success"
         if (dbConnection.emailExists(email)) {
             out.println("duplicate");
         } else {
-            dbConnection.registerUser(username, password,email,nickname);
+            dbConnection.registerUser(username, password,email,nickname,avatar,signature);
             out.println("success");
         }
     }
-
-    /**
-     * 处理用户登录请求的方法
-     * @param out 输出流，用于向客户端发送响应
-     * @param requestParts 请求参数数组，其中第二个元素应为用户名，第三个元素应为密码
-     */
-    private void handleLogin(PrintWriter out, String[] requestParts) {
-        // 如果请求参数的数量不等于3，返回错误信息
-        if (requestParts.length != 3) {
-            out.println("error");
-            return;
-        }
-        // 获取用户名和密码
-        String username = requestParts[1];
-        String password = requestParts[2];
-        // 检查用户名和密码是否正确
-        boolean loginSuccess = dbConnection.checkLogin(username, password);
-        if (loginSuccess) {
-            // 如果用户名和密码正确，从数据库中获取用户信息
-            User1 user1 = dbConnection.getUserByUsername(username);
-            System.out.println("从数据库中得到的用户信息: "+user1);
-            // 使用Gson将用户信息转换为JSON格式
-            Gson gson = new Gson();
-            String userJson = gson.toJson(user1);
-            System.out.println("序列化后: "+userJson);
-            // 将成功的响应和用户信息发送给客户端
-            out.println("success:" + userJson);
-        } else {
-            // 如果用户名和密码不正确，发送失败的响应给客户端
-            out.println("false:");
-        }
-    }
-
-    // 处理登录请求
-   /* private void handleLogin(PrintWriter out, String[] requestParts) {
-        // 检查请求是否包含正确数量的参数
-        if (requestParts.length != 3) {
-            out.println("error");
-            return;
-        }
-
-        String username = requestParts[1];
-        String password = requestParts[2];
-
-        // 如果用户名和密码匹配，返回"success"，否则返回"fail"
-        if (dbConnection.checkLogin(username, password)) {
-            out.println("success");
-            System.out.println("登入成功  密码是："+password);
-        } else {
-            out.println("fail");
-            System.out.println("密码错误："+password);
-        }
-    }*/
-
 
     //处理发送验证码请求
     private void handleEmailVerification(PrintWriter out, String[] requestParts) {
@@ -374,11 +655,9 @@ public class ServerHandler implements Runnable {
         String generatedCode = EmailVca.generateRandomCode();//得到 6 位数验证码
         EmailVca emailVca = new EmailVca(email, generatedCode);//发送验证码
 
-
         //创建一个 FutureTask 对象 emailTask，并将 emailVca 对象作为参数传入。
         // FutureTask 是 Java 中的一个类，用于封装一个 callable 对象，并支持获取其执行结果、取消任务等操作。
         FutureTask<Void> emailTask = new FutureTask<>(emailVca);
-
         /*
         创建一个新的线程 emailThread来执行emailTask，并将 emailTask 作为构造方法的参数传入。
         调用 setDaemon(true) 方法将该线程设置为守护线程，以便在主线程结束后自动销毁。
@@ -427,11 +706,20 @@ public class ServerHandler implements Runnable {
         // 如果邮箱和验证码匹配，返回"success"，否则返回"fail"
         if (dbConnection.emailExists(email)) {
             User1 user1 = dbConnection.getUserByEmail(email);
-            System.out.println("邮箱登录："+user1);
-
+            String username = user1.getUsername();
+            dbConnection.setUserStatus(username, "online");
+            String status = dbConnection.getUserStatus(username);
+            if (status.equals("online")) {
+                out.println("error:该用户已经登录");
+                System.out.println("该用户状态："+status);
+                return;
+            }
+            User1 user2 = dbConnection.getUserByEmail(email);
+            System.out.println("邮箱登录："+user2);
+            //更新在线状态
             //序列化
             Gson gson = new Gson();
-            String userJson = gson.toJson(user1);
+            String userJson = gson.toJson(user2);
             System.out.println("序列化后: "+userJson);
             out.println("success:"+userJson);
             System.out.println("登录成功");

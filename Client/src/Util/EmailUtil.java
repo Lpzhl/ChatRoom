@@ -17,7 +17,7 @@ import java.util.Map;
 public class EmailUtil {
 
     // 验证码有效期限，以分钟为单位
-    public static final int CODE_VALIDITY_MINUTES = 2;
+    public static final int CODE_VALIDITY_MINUTES = 3;
 
     // 检查指定电子邮件地址和验证码是否匹配，且验证码未过期
     public static boolean isCodeValid(String email, String code, Map<String, Pair<String, LocalDateTime>> generatedCodes) {
@@ -51,12 +51,13 @@ public class EmailUtil {
     }
 
     // 检查验证码是否在有效期内
+    //正则判断QQ邮箱是否正确
     public static boolean isValidEmail(String email) {
         String emailPattern = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,6}$";
         return email.matches(emailPattern);
     }
 
-    //匿名内部类
+    //匿名内部类，验证码每60秒获取一次
     public static void startCountdown(Button button) {
         Timeline timeline = new Timeline();
         final int[] countdown = {60};

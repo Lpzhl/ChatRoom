@@ -153,7 +153,10 @@ public class RetrievePasswordController1 {
             showAlert(Alert.AlertType.ERROR, "错误", "所有字段都不能为空");
             return;
         }
-
+        if (!isValidPassword(newPassword)&&!isValidPassword(confirmPassword)) {
+            showAlert(Alert.AlertType.ERROR, "错误", "密码必须包含英文字母和数字，长度在8-18之间");
+            return;
+        }
         if (!newPassword.equals(confirmPassword)) {
             showAlert(Alert.AlertType.ERROR, "错误", "两次密码输入不一致");
             return;
@@ -268,4 +271,8 @@ public class RetrievePasswordController1 {
     public void Userpasswordi2(ActionEvent actionEvent) {
 
     }
+    private boolean isValidPassword(String password) {
+        return password.matches("(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,18}");
+    }
+
 }

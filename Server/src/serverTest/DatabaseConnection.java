@@ -1,5 +1,6 @@
 package serverTest;
 
+import server.Group1;
 import server.User1;
 
 import java.security.MessageDigest;
@@ -23,6 +24,370 @@ public class DatabaseConnection {
             Class.forName("com.mysql.cj.jdbc.Driver");
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
+        }
+    }
+
+
+    public List<Group1> getGroupsByUserId(int userId) {
+        String sql = "SELECT g.* FROM `groups` g JOIN group_members gm ON g.id = gm.group_id WHERE gm.user_id = ?";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            ResultSet resultSet = statement.executeQuery();
+            List<Group1> groups = new ArrayList<>();
+            //System.out.println("ResultSet是否有下一行："+resultSet.next());
+            while (resultSet.next()) {
+                System.out.println("111");
+                //System.out.println(resultSet.next());
+                Group1 group = new Group1();
+                group.setId(resultSet.getInt("id"));
+                group.setName(resultSet.getString("name"));
+                group.setDescription(resultSet.getString("description"));
+                group.setAvatar(resultSet.getString("avatar_path"));
+                System.out.println("群众："+group);
+                // 根据你的Group类的定义，你可能需要获取更多的列
+                groups.add(group);
+            }
+            System.out.println("返回的："+groups);
+            return groups;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+    public boolean createGroup(Group1 group, int creatorId) {
+        String sql = "INSERT INTO `groups` (name, description, avatar_path, created_by,name_id) VALUES (?, ?, ?, ?,?)";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            statement.setString(1, group.getName());
+            statement.setString(2, group.getDescription());
+            statement.setString(3, group.getAvatar());
+            statement.setInt(4, creatorId);
+            System.out.println("群ID："+group.getName_id());
+            statement.setString(5,group.getName_id());
+            int rowCount = statement.executeUpdate();
+            if (rowCount > 0) {
+                ResultSet rs = statement.getGeneratedKeys();
+                if (rs.next()) {
+                    int groupId = rs.getInt(1);
+                    String memberSql = "INSERT INTO group_members (group_id, user_id, role, join_time, status) VALUES (?, ?, ?, ?, ?)";
+                    try (Connection connection1 = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                         PreparedStatement memberStatement = connection1.prepareStatement(memberSql)) {
+                        memberStatement.setInt(1, groupId);
+                        memberStatement.setInt(2, creatorId);
+                        memberStatement.setString(3, "creator");
+                        memberStatement.setTimestamp(4, new Timestamp(System.currentTimeMillis()));
+                        memberStatement.setString(5, "active");
+                        memberStatement.executeUpdate();
+                        return true;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+
+
+    // 获取用户状态
+    public String getUserStatus(String username) {
+        String select = "SELECT status FROM users WHERE username = ?";
+        try (
+                Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                PreparedStatement statement = connection.prepareStatement(select);
+        ) {
+            statement.setString(1, username);
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getString("status");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    // 设置用户状态
+    public void setUserStatus(String username, String status) {
+        String update = "UPDATE users SET status = ? WHERE username = ?";
+        try (
+                Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                PreparedStatement statement = connection.prepareStatement(update);
+        ) {
+            statement.setString(1, status);
+            statement.setString(2, username);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // 获取请求列表
+    public List<String> getRequestList(String username) {
+        int userId = getUserIdByUsername(username);
+        String select = "SELECT username FROM users WHERE id IN (SELECT sender_id FROM requests WHERE receiver_id = ? AND status = 'pending')";
+        List<String> requestList = new ArrayList<>();
+        try (
+                Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                PreparedStatement statement = connection.prepareStatement(select)
+        ) {
+            statement.setInt(1, userId);
+            ResultSet resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+                requestList.add(resultSet.getString("username"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return requestList;
+    }
+
+    // 更新请求状态
+    public boolean updateFriendRequestStatus(String username1, String username2, String status) {
+        int userId1 = getUserIdByUsername(username1);
+        int userId2 = getUserIdByUsername(username2);
+        String update = "UPDATE requests SET status = ? WHERE sender_id = ? AND receiver_id = ?";
+        try (
+                Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                PreparedStatement statement = connection.prepareStatement(update)
+        ) {
+            statement.setString(1, status);
+            statement.setInt(2, userId2); // 注意这里是userId2，因为userId2是
+            statement.setInt(3, userId1); // and userId1 is the receiver_id
+            return statement.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    // 该方法用于向数据库中添加一条新的好友请求
+    public boolean sendFriendRequest(String senderUsername, String receiverUsername) {
+        // 创建一个SQL插入语句，用于向requests表中添加一条新的记录
+        String insert = "INSERT INTO requests(sender_id, receiver_id, request_type, status, created_at, updated_at) VALUES (?, ?, 'friend', 'pending', NOW(), NOW())";
+        // 使用try-with-resources结构来自动关闭数据库连接和PreparedStatement
+        try (
+                // 获取数据库连接
+                Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                // 预处理SQL插入语句
+                PreparedStatement statement = connection.prepareStatement(insert)
+        ) {
+            // 从数据库中获取发送者和接收者的ID
+            int senderId = getUserIdByUsername(senderUsername);
+            int receiverId = getUserIdByUsername(receiverUsername);
+            // 如果发送者或接收者不存在，则返回false
+            if (senderId == -1 || receiverId == -1) {
+                return false;
+            }
+            // 将SQL插入语句中的占位符替换为发送者和接收者的ID
+            statement.setInt(1, senderId);
+            statement.setInt(2, receiverId);
+            // 执行SQL插入语句
+            statement.executeUpdate();
+            // 如果执行成功，则返回true
+            return true;
+        } catch (SQLException e) {
+            // 如果执行过程中发生了SQL异常，则返回false
+            e.printStackTrace();
+            return false;
+        }
+    }
+    // 该方法用于根据用户名从数据库中获取用户ID
+    private int getUserIdByUsername(String username) {
+        // 创建一个SQL查询语句，用于从users表中获取用户的ID
+        String select = "SELECT id FROM users WHERE username = ?";
+        // 使用try-with-resources结构来自动关闭数据库连接和PreparedStatement
+        try (
+                // 获取数据库连接
+                Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                // 预处理SQL查询语句
+                PreparedStatement statement = connection.prepareStatement(select)
+        ) {
+            // 将SQL查询语句中的占位符替换为用户名
+            statement.setString(1, username);
+            // 执行SQL查询语句，并获取查询结果
+            ResultSet resultSet = statement.executeQuery();
+            // 如果查询结果不为空，则返回用户的ID
+            if (resultSet.next()) {
+                return resultSet.getInt("id");
+            } else {
+                // 如果查询结果为空，则返回-1
+                return -1;
+            }
+        } catch (SQLException e) {
+            // 如果执行过程中发生了SQL异常，则返回-1
+            e.printStackTrace();
+            return -1;
+        }
+    }
+
+    public boolean canAddFriend(String username1, String username2) {
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            String checkSql = "SELECT COUNT(*) FROM users WHERE username IN (?, ?)";
+            pstmt = conn.prepareStatement(checkSql);
+            pstmt.setString(1, username1);
+            pstmt.setString(2, username2);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                int count = rs.getInt(1);
+                if (count < 2) {
+                    return false;
+                }
+            }
+            rs.close();
+            pstmt.close();
+
+            String checkFriendSql = "SELECT COUNT(*) FROM friends f " +
+                    "JOIN users u1 ON f.user_id = u1.id " +
+                    "JOIN users u2 ON f.friend_id = u2.id " +
+                    "WHERE (u1.username = ? AND u2.username = ?) OR (u1.username = ? AND u2.username = ?)";
+            pstmt = conn.prepareStatement(checkFriendSql);
+            pstmt.setString(1, username1);
+            pstmt.setString(2, username2);
+            pstmt.setString(3, username2);
+            pstmt.setString(4, username1);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                int count = rs.getInt(1);
+                if (count > 0) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    //添加好友
+    public boolean addFriend(String username1, String username2) {
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+
+            // 检查两个用户名是否存在
+            String checkSql = "SELECT COUNT(*) FROM users WHERE username IN (?, ?)";
+            pstmt = conn.prepareStatement(checkSql);
+            pstmt.setString(1, username1);
+            pstmt.setString(2, username2);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                int count = rs.getInt(1);
+                if (count < 2) {
+                    // 至少一个用户名不存在
+                    return false;
+                }
+            }
+            rs.close();
+            pstmt.close();
+
+            String checkFriendSql = "SELECT COUNT(*) FROM friends f " +
+                    "JOIN users u1 ON f.user_id = u1.id " +
+                    "JOIN users u2 ON f.friend_id = u2.id " +
+                    "WHERE (u1.username = ? AND u2.username = ?) OR (u1.username = ? AND u2.username = ?)";
+            pstmt = conn.prepareStatement(checkFriendSql);
+            pstmt.setString(1, username1);
+            pstmt.setString(2, username2);
+            pstmt.setString(3, username2);
+            pstmt.setString(4, username1);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                int count = rs.getInt(1);
+                if (count > 0) {
+                    return false;
+                }
+            }
+            rs.close();
+            pstmt.close();
+
+            // 以上检查都通过，添加好友
+            // 添加第一条记录：username1 的 user_id 和 username2 的 friend_id
+            String insertSql = "INSERT INTO friends (user_id, friend_id, created_at, updated_at) " +
+                    "SELECT u1.id, u2.id, NOW(), NOW() FROM users u1, users u2 " +
+                    "WHERE u1.username = ? AND u2.username = ?";
+            pstmt = conn.prepareStatement(insertSql);
+            pstmt.setString(1, username1);
+            pstmt.setString(2, username2);
+            int affectedRows = pstmt.executeUpdate();
+
+            // 添加第二条记录：username2 的 user_id 和 username1 的 friend_id
+            insertSql = "INSERT INTO friends (user_id, friend_id, created_at, updated_at) " +
+                    "SELECT u1.id, u2.id, NOW(), NOW() FROM users u1, users u2 " +
+                    "WHERE u1.username = ? AND u2.username = ?";
+            pstmt = conn.prepareStatement(insertSql);
+            pstmt.setString(1, username2);
+            pstmt.setString(2, username1);
+            affectedRows += pstmt.executeUpdate();
+
+            return affectedRows > 1;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            // 关闭资源
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+    //删除好友关系
+    public boolean deleteFriend(String username1, String username2) {
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+
+            // 删除好友关系
+            String deleteSql = "DELETE FROM friends " +
+                    "WHERE (user_id = (SELECT id FROM users WHERE username = ?) AND " +
+                    "friend_id = (SELECT id FROM users WHERE username = ?)) OR " +
+                    "(user_id = (SELECT id FROM users WHERE username = ?) AND " +
+                    "friend_id = (SELECT id FROM users WHERE username = ?))";
+            pstmt = conn.prepareStatement(deleteSql);
+            pstmt.setString(1, username1);
+            pstmt.setString(2, username2);
+            pstmt.setString(3, username2);
+            pstmt.setString(4, username1);
+            int affectedRows = pstmt.executeUpdate();
+
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            // 关闭资源
+            try {
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -125,75 +490,6 @@ public class DatabaseConnection {
     }
 
 
-    //添加好友
-    public boolean addFriend(String username1, String username2) {
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-
-        try {
-            conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
-            // 检查两个用户名是否存在
-            String checkSql = "SELECT COUNT(*) FROM users WHERE username IN (?, ?)";
-            pstmt = conn.prepareStatement(checkSql);
-            pstmt.setString(1, username1);
-            pstmt.setString(2, username2);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                int count = rs.getInt(1);
-                if (count < 2) {
-                    System.out.println("添加失败，无该用户！！！");
-                    // 至少一个用户名不存在
-                    return false;
-                }
-            }
-            rs.close();
-            pstmt.close();
-
-            // 检查是否已经是好友
-            String checkFriendSql = "SELECT COUNT(*) FROM friends f " +
-                    "JOIN users u1 ON f.user_id = u1.id " +
-                    "JOIN users u2 ON f.friend_id = u2.id " +
-                    "WHERE (u1.username = ? AND u2.username = ?) OR (u1.username = ? AND u2.username = ?)";
-            pstmt = conn.prepareStatement(checkFriendSql);
-            pstmt.setString(1, username1);
-            pstmt.setString(2, username2);
-            pstmt.setString(3, username2);
-            pstmt.setString(4, username1);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                int count = rs.getInt(1);
-                if (count > 0) {
-                    System.out.println("添加失败你们已经是好友了！！！");
-                    // 已经是好友
-                    return false;
-                }
-            }
-            rs.close();
-            pstmt.close();
-            // 以上检查都通过，添加好友
-            String insertSql = "INSERT INTO friends (user_id, friend_id, created_at, updated_at) " +
-                    "SELECT u1.id, u2.id, NOW(), NOW() FROM users u1, users u2 " +
-                    "WHERE u1.username = ? AND u2.username = ?";
-            pstmt = conn.prepareStatement(insertSql);
-            pstmt.setString(1, username1);
-            pstmt.setString(2, username2);
-            int affectedRows = pstmt.executeUpdate();
-            return affectedRows > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        } finally {
-            // 关闭资源
-            try {
-                if (rs != null) rs.close();
-                if (pstmt != null) pstmt.close();
-                if (conn != null) conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-    }
     public User1 getUserInfo(String username) {
         User1 user = null;
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
@@ -415,8 +711,8 @@ public class DatabaseConnection {
     }
 
     //注册账号
-    public void registerUser(String username, String password, String email, String nickname) {
-        String query = "INSERT INTO users (username, password, email, nickname) VALUES (?, ?, ?, ?)";//问号的顺序是：(1)username, (2)password, (3)email, (4)nickname。
+    public void registerUser(String username, String password, String email, String nickname,String avatar,String signature) {
+        String query = "INSERT INTO users (username, password, email, nickname,avatar,signature) VALUES (?, ?, ?, ?,?,?)";//问号的顺序是：(1)username, (2)password, (3)email, (4)nickname。
         try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
             // 创建一个用于执行预编译 SQL 查询的 PreparedStatement 对象。预编译的查询可以防止 SQL 注入攻击，并提高查询性能。
              PreparedStatement statement = connection.prepareStatement(query)) {
@@ -424,6 +720,8 @@ public class DatabaseConnection {
             statement.setString(2, md5(password)); //MD5加密    将第二个问号替换为加密后的 password，
             statement.setString(3, email);// 将第三个问好替换成 email
             statement.setString(4, nickname);  //将第四个问号 替换成 nickname
+            statement.setString(5,avatar);
+            statement.setString(6,signature);
             statement.executeUpdate();//执行预编译的 SQL 更新查询，例如插入、更新或删除记录
         } catch (SQLException e) {
             e.printStackTrace();
@@ -499,7 +797,7 @@ public class DatabaseConnection {
             return new BigInteger(1, md.digest()).toString(16);//将加密后的字节数组转换为一个 BigInteger 实例，并将其转换为十六进制字符串。最后返回这个字符串：
         } catch (NoSuchAlgorithmException e) {
             //这个 RuntimeException 会抛给调用 md5 方法的代码。   在这个例子中，调用 md5 方法的代码是 updateUserPassword 方法。
-            throw new RuntimeException("MD5 algorithm not found.", e);//如果在获取 MD5 算法实例过程中出现任何异常（如未找到 MD5 算法），捕获异常并抛出一个运行时异常
+            throw new RuntimeException("MD5 加密未实现", e);//如果在获取 MD5 算法实例过程中出现任何异常（如未找到 MD5 算法），捕获异常并抛出一个运行时异常
         }
     }
 
@@ -519,6 +817,22 @@ public class DatabaseConnection {
         }
     }
 
+    public boolean GroupUserExists(String username) {
+            // 准备查询语句
+            String query = "SELECT COUNT(*) FROM `groups` WHERE name_id = ?";
+            try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                 PreparedStatement statement = connection.prepareStatement(query)) {
+                // 设置插入参数
+                statement.setString(1, username);
+                ResultSet resultSet = statement.executeQuery();
+                if (resultSet.next()) {
+                    return resultSet.getInt(1) > 0;
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            return false;
+    }
 }
 
 /*

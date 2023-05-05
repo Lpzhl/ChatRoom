@@ -2,16 +2,18 @@ package controller;
 
 import client.User;
 import com.google.gson.Gson;
-import javafx.application.Platform;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.stage.Window;
+import javafx.stage.WindowEvent;
 
 import java.io.*;
 import java.net.Socket;
@@ -49,14 +51,14 @@ public class LoginController {
     private TextField Userpasswordi;
 
 
+        /*
+            private：这是一个访问修饰符，表示这个常量只能在当前类中访问，不能在类的外部访问。
+        */
 
     // 登录文件名
     private static final String LOGIN_FILE = "loginCredentials.properties";
     private boolean passwordVisible = false;
     private User currentUser;
-
-
-
     // 弹出警告框的方法
     @FXML
     private void showAlert(Alert.AlertType alertType, String title, String content) {
@@ -120,9 +122,14 @@ public class LoginController {
         System.out.println("登入按钮被点击");
         String username = UserNameInput.getText().trim();
         String password = Userpassword.getText().trim();
+        if(username.isEmpty()||password.isEmpty()){
+            showAlert(Alert.AlertType.ERROR,"错误","请输入用户名或者密码");
+            return;
+        }
         User user = login(username, password);
-
-        if (user != null) {
+        if(user ==USER_ALREADY_LOGGED_IN){
+            //不做处理
+        } else if (user != null) {
             System.out.println("登录成功");
             String currentUser = UserNameInput.getText();
             this.currentUser = user; // 保存登录成功的用户信息
@@ -135,52 +142,101 @@ public class LoginController {
                 saveLoginCredentials(currentUser, "");
             }
             // 跳转到其他场景，例如主界面
-            //showNewScene("/fxml/Main.fxml", "主界面");
             // 将当前登录的用户传递给聊天室控制器
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/Chatmenuinterface.fxml"));
             Parent root = fxmlLoader.load();
-            PleaseProvideController chatController = fxmlLoader.getController();
+            ChatRoomController chatController = fxmlLoader.getController();
+
+            // 创建新的舞台对象
+            Stage stage = new Stage();
+            //stage.initStyle(StageStyle.UNIFIED);
+            stage.setTitle("聊天室");
+            // 将新创建的舞台传递给聊天室控制器
+            chatController.setPrimaryStage(stage);
             chatController.setCurrentUser(user);
             chatController.updateHomeScreenAvatar(user.getAvatar());
+
             Scene scene = new Scene(root);
-            Stage stage = new Stage();
-            stage.setTitle("聊天室");
             stage.setScene(scene);
             stage.show();
+
+            // 设置关闭窗口的事件
+            stage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+                public void handle(WindowEvent we) {
+                    System.out.println("窗口关闭！！");
+                    // 获取子窗口所属的父窗口
+                    Window parent = stage.getOwner();
+
+                    // 关闭所有子界面
+                    for (Stage childStage : chatController.getChildStages()) {
+                        childStage.close();
+                    }
+                    // 如果父窗口不为空，就关闭父窗口
+                    if (parent != null) {
+                        parent.hide();
+                    }
+                    // 在此处添加发送"logout"消息的代码
+                    try {
+                        sendLogoutMessage(user.getUsername());
+                        // 如果父窗口不为空，就关闭父窗口
+                        if (parent != null) {
+                            parent.hide();
+                        }
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
             Stage stage2 = (Stage) Loin.getScene().getWindow();
             stage2.close();
-        } else {
+        } else
+        {
             System.out.println("登录失败");
             showAlert(Alert.AlertType.ERROR, "错误", "用户名或密码错误");
         }
     }
+    private void sendLogoutMessage(String username) throws IOException {
+        // 这里是向服务器发送注销消息的代码
+        try(Socket socket = new Socket("127.0.0.1",6000);
+            PrintWriter out = new PrintWriter(socket.getOutputStream(),true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))){
+            //发送退出请求
+            out.println("logout:"+username);
+            System.out.println("发送退出请求："+username);
+        }
+    }
+
+    private static final User USER_ALREADY_LOGGED_IN = new User();
 
 
     private User login(String username, String password) {
-        User user = null;
-        try (Socket socket = new Socket("127.0.0.1", 6000);
+        try (Socket socket = new Socket("127.0.0.1", 6000);//IP:127.0.0.1   端口6000
              PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
-            if (socket.isClosed()) {
-                System.out.println("Socket is closed before sending request to server");
-            } else {
-                System.out.println("Socket is open before sending request to server");
-            }
             out.println("login:" + username + ":" + password);
+
             String response = in.readLine();
             System.out.println(response);
             String[] responseParts = response.split(":", 2);
             if ("success".equals(responseParts[0])) {
                 System.out.println(responseParts[1]);
                 Gson gson = new Gson();
-                user = gson.fromJson(responseParts[1], User.class);
-                System.out.println("反序列化后："+user);
+                return gson.fromJson(responseParts[1], User.class);
+            } else if ("error".equals(responseParts[0])&&responseParts.length==2) {
+                if ("该用户已经登录".equals(responseParts[1])) {
+                    // 在这里处理 "用户已登录" 错误
+                    System.out.println("哈哈哈"+USER_ALREADY_LOGGED_IN);
+                    showAlert(Alert.AlertType.ERROR, "错误", "该用户已经登录");
+                    return USER_ALREADY_LOGGED_IN;
+                }else {
+                    return null;
+                }
             }
         } catch (IOException e) {
             System.err.println("网络错误: " + e.getMessage());
         }
-        return user;
+        return null;
     }
 
     // 从登录文件中读取登录信息
@@ -207,7 +263,7 @@ public class LoginController {
         return loginCredentials;
     }
 
-    // 将登录信息保存到登录文件中
+    // 将登录信息保存到登录文件中.该文件使用 Properties 格式保存。
     private void saveLoginCredentials(String currentUser, String password) {
         // 从登录文件中读取登录信息
         Properties loginCredentials = readLoginFxml();
@@ -215,10 +271,10 @@ public class LoginController {
         loginCredentials.setProperty(currentUser, password);
         try {
             // 创建一个FileOutputStream对象，用于将登录信息写入登录文件
-            FileOutputStream fos = new FileOutputStream(LOGIN_FILE);
-            // 将登录信息从Properties对象存储到文件输出流中
+            FileOutputStream fos = new FileOutputStream(LOGIN_FILE);//用于写入二进制数据到文件中
+            // 将登录信息从Properties对象存储到文件输出流中    我们将其设置为 null，表示不需要注释信息。
             loginCredentials.store(fos, null);
-            // 关闭文件输出流
+            // 关闭文件输出流   store() 方法会自动将输出流进行刷新，并且不会关闭该输出流对象。因此，我们需要在使用完输出流对象后手动关闭它，以释放系统资源
             fos.close();
         } catch (Exception e) {
             // 如果在保存登录信息过程中出现异常，打印堆栈跟踪信息

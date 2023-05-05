@@ -19,11 +19,14 @@ public class EmailVca implements Callable<Void> {
     private String generatedCode;
 
     public EmailVca(String toEmail, String generatedCode) {
-        this.toEmail = toEmail;
-        this.generatedCode = generatedCode;
+        this.toEmail = toEmail; // 接收者
+        this.generatedCode = generatedCode;// 验证码
     }
     public Void call() throws Exception {
         // 从 email.properties 文件中读取邮件服务器配置信息
+        //我们首先创建了一个 Properties 对象 properties，然后使用 FileInputStream 来打开配置文件，将其读取到输入流 input 中。
+        // 接下来，我们使用 properties 的 load 方法将输入流中的数据加载到 properties 对象中。
+        //我们使用了 try-with-resources 语句，它会自动关闭输入流 input
         Properties properties = new Properties();
         try (InputStream input = new FileInputStream("Server/src/fxml/email.properties")) {
             properties.load(input);
@@ -35,7 +38,7 @@ public class EmailVca implements Callable<Void> {
         String fromEmail = properties.getProperty("mail.from.email");
         String emailPassword = properties.getProperty("mail.from.password");
 
-        // 创建一个用于发送邮件的 session
+        // 创建一个用于发送邮件的 session  JavaMail API
         Session session = Session.getInstance(properties, new Authenticator() {
             // 创建一个新的 Authenticator 对象来进行身份验证
             protected PasswordAuthentication getPasswordAuthentication() {
