@@ -80,7 +80,7 @@ public class CreateGroupChat {
         System.out.println();
         System.out.println("雪花算法生成的群ID："+name_id);
 
-        Group newGroup = new Group(name_id,groupName, groupDesc, "/image/默认头像.png", currentUser.getId());
+        Group newGroup = new Group(name_id,groupName, groupDesc, "/image/默认头像.png", (int) currentUser.getId());
         Gson gson = new Gson();
         String groupJson = gson.toJson(newGroup);
 

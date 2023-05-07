@@ -33,6 +33,10 @@ public class User1 {
         this.updatedAt = updatedAt;
     }
 
+    public User1(int userId, String username) {
+        this.id = userId;
+        this.username = username;
+    }
 
 
     public int getId() {

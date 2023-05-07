@@ -10,6 +10,7 @@ import java.util.List;
 
 public class User {
     private int id;
+    private String username1;
     private String username;
     private String email;
     private String avatar;
@@ -22,6 +23,19 @@ public class User {
     private LocalDate updatedAt;
     private String password;
     private List<User> friends;
+
+    public User(String username1, String username) {
+        this.username1 = username1;
+        this.username = username;
+    }
+
+    public String getUsername1() {
+        return username1;
+    }
+
+    public void setUsername1(String username1) {
+        this.username1 = username1;
+    }
 
     public List<User> getFriends() {
         return friends;

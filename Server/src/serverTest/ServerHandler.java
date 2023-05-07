@@ -3,6 +3,7 @@ package serverTest;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
+import server.ChatMessage1;
 import server.Group1;
 import server.User1;
 
@@ -124,6 +125,9 @@ public class ServerHandler implements Runnable {
                 case "rejectFriendRequest":// 处理拒绝好友请求
                     handleRejectFriendRequest(out, requestParts1[1]);
                     break;
+                case "sendMessage":
+                    handleSendMessage(out, requestParts);
+                    break;
                 /*case "addFriend":
                     handleAddFriend(out, requestParts1);
                     break;*/
@@ -139,6 +143,12 @@ public class ServerHandler implements Runnable {
                 case "getGroups":// 处理查看群聊列表请求
                     System.out.println("查看群聊："+requestParts1[1]);
                     handleGetGroupsRequest(out, requestParts1[1]);
+                    break;
+                case "checkForNewMessages": // 处理检查新消息请求
+                    handleCheckForNewMessages(out, requestParts);
+                    break;
+                case "getUserById":
+                    handleGetUserById(out,requestParts);
                     break;
                 default:
                     out.println("error");
@@ -172,6 +182,69 @@ public class ServerHandler implements Runnable {
 
     }
 
+    private void handleCheckForNewMessages(PrintWriter out, String[] requestParts) {
+        if (requestParts.length == 3) {
+
+            int userId = Integer.parseInt(requestParts[1]);
+            int activeReceiverId = Integer.parseInt(requestParts[2]);
+            System.out.println("发送者："+userId+ " 接收者:"+activeReceiverId);
+            DatabaseConnection dbConnection = new DatabaseConnection();
+
+            List<ChatMessage1> unreadMessages = dbConnection.getUnreadMessages(userId,activeReceiverId);//目的是获取当前登录用户从活动接收者那里收到的所有未读消息。
+
+            System.out.println("有对象吗1");
+            // 将未读消息发送回客户端
+            for (ChatMessage1 message : unreadMessages) {
+                //System.out.println("发送ID："+message.getSender().getId()+" 接收者："+message.getReceiver().getId()+" 发送的内容："+message.getContent());
+                //out.println(message.getSender().getId() + ":" + message.getReceiver().getId() + ":" + message.getContent() + ":" + message.getCreatedAt());
+                out.println(message.getSender().getId() + ":" + message.getReceiver().getId() + ":" + message.getContent());
+                System.out.println("有对象吗");
+            }
+        } else {
+            out.println("error");
+        }
+    }
+
+    private void handleGetUserById(PrintWriter out, String[] requestParts) {
+        if (requestParts.length == 2) {
+            int userId = Integer.parseInt(requestParts[1]);
+
+            DatabaseConnection dbConnection = new DatabaseConnection();
+            User1 user = dbConnection.getUserById1(userId);
+
+            if (user != null) {
+                // 将用户信息发送回客户端，格式为：id:username
+                out.println(user.getId() + ":" + user.getUsername());
+            } else {
+                out.println("error");
+            }
+        } else {
+            out.println("error");
+        }
+    }
+
+    private void handleSendMessage(PrintWriter out, String[] requestParts) {
+        if (requestParts.length != 4) {
+            out.println("error:invalid request format");
+            return;
+        }
+
+        int senderId = Integer.parseInt(requestParts[1]);
+        int receiverId = Integer.parseInt(requestParts[2]);
+        String messageContent = requestParts[3];
+
+        // 插入消息到messages表
+        int messageId = dbConnection.insertMessage(senderId, receiverId, messageContent, "text");
+
+        // 插入聊天记录到chat_records表
+        if (messageId != -1) {
+            dbConnection.insertChatRecord(senderId, messageId, "read");
+            dbConnection.insertChatRecord(receiverId, messageId, "unread");
+            out.println("success");
+        } else {
+            out.println("error");
+        }
+    }
     // 处理雪花算法群账号的唯一性
     private void handlefinDup1(PrintWriter out, String requestPart) {
         String username = requestPart;

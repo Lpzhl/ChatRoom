@@ -1,5 +1,6 @@
 package controller;
 
+import Util.ConnectionManager;
 import client.User;
 import com.google.gson.Gson;
 import javafx.event.ActionEvent;
@@ -115,6 +116,19 @@ public class LoginController {
         }
     }
     // 当用户点击登录按钮时触发
+    private void sendLogoutMessage(String username) throws IOException {
+        // 这里是向服务器发送注销消息的代码
+        try(Socket socket = new Socket("127.0.0.1",6000);
+            PrintWriter out = new PrintWriter(socket.getOutputStream(),true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))){
+            //发送退出请求
+            out.println("logout:"+username);
+            System.out.println("发送退出请求："+username);
+        }
+    }
+
+    private static final User USER_ALREADY_LOGGED_IN = new User();
+
     @FXML
 // 当用户点击登录按钮时触发
     public void Luck() throws IOException {
@@ -138,14 +152,22 @@ public class LoginController {
                 // 将当前用户名和密码保存到登录文件中
                 saveLoginCredentials(currentUser, Userpassword.getText());
             } else {
-            // 否则，仅保存用户名
+                // 否则，仅保存用户名
                 saveLoginCredentials(currentUser, "");
             }
-            // 跳转到其他场景，例如主界面
+
+
+            // 建立长连接
+            ConnectionManager connectionManager = ConnectionManager.getInstance();
+            connectionManager.connect(username);
+
             // 将当前登录的用户传递给聊天室控制器
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/Chatmenuinterface.fxml"));
             Parent root = fxmlLoader.load();
             ChatRoomController chatController = fxmlLoader.getController();
+            // 将 ConnectionManager 对象传递给聊天室控制器
+            chatController.setConnectionManager(connectionManager);
+            //ChatRoomController chatController = fxmlLoader.getController();
 
             // 创建新的舞台对象
             Stage stage = new Stage();
@@ -195,19 +217,6 @@ public class LoginController {
             showAlert(Alert.AlertType.ERROR, "错误", "用户名或密码错误");
         }
     }
-    private void sendLogoutMessage(String username) throws IOException {
-        // 这里是向服务器发送注销消息的代码
-        try(Socket socket = new Socket("127.0.0.1",6000);
-            PrintWriter out = new PrintWriter(socket.getOutputStream(),true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))){
-            //发送退出请求
-            out.println("logout:"+username);
-            System.out.println("发送退出请求："+username);
-        }
-    }
-
-    private static final User USER_ALREADY_LOGGED_IN = new User();
-
 
     private User login(String username, String password) {
         try (Socket socket = new Socket("127.0.0.1", 6000);//IP:127.0.0.1   端口6000
