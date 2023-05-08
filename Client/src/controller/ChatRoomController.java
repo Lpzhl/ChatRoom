@@ -2,18 +2,15 @@ package controller;
 
 import Util.ConnectionManager;
 import client.ChatMessage;
-import client.ChatRecord;
 import client.Group;
 import client.User;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.sun.org.apache.bcel.internal.generic.NEW;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -52,10 +49,10 @@ import java.util.List;
 import java.util.Map;
 
 
-public class ChatRoomController {
+public class ChatRoomController implements ConnectionManager.MessageListener {
 
     @FXML
-    private Label PeopleName;
+    public Label PeopleName;
 
     @FXML
     private Circle RequestPrompt;
@@ -113,8 +110,6 @@ public class ChatRoomController {
     @FXML
     private ImageView HomeScreenAvatar;
 
-    //@FXML
-    //private ListView<ChatRecord> ChatRecord1;
     @FXML
     private ListView<ChatMessage> ChatRecord1;
 
@@ -125,7 +120,7 @@ public class ChatRoomController {
     private ToggleButton RequestisLt;
 
     @FXML
-    private User activeReceiver;
+    public User activeReceiver;
     @FXML
     private ToggleButton HeadPicture;
 
@@ -137,26 +132,16 @@ public class ChatRoomController {
 
     private Stage primaryStage;
 
-    /*
-    这行代码声明了一个ListView<User>类型的私有变量friendsListView。
-    ListView是JavaFX中用于显示列表数据的一种控件。在尖括号中的User是泛型参数，表示这个ListView中的每一项都是一个User对象。
-     */
     @FXML
     private ListView<User> friendsListView;
 
     public List<Stage> childStages = new ArrayList<>();
-
+    private User activeChatFriend;
     public List<Stage> getChildStages() {
         return childStages;
     }
-    /*
-    这行代码创建了一个ObservableList<User>类型的私有变量friendList，并初始化为一个空的ObservableArrayList。
-    ObservableList是JavaFX中用于表示可观察列表的接口。这种列表可以被监听，当列表中的数据发生变化时，所有的监听器都会收到通知。
-    在这个例子中，friendList是用来存储User对象的。
-    当你向friendList中添加或删除User对象时，任何监听这个列表的控件（例如，你的friendsListView）都会自动更新，以反映列表中的新内容。
-     */
     private ObservableList<User> friendList = FXCollections.observableArrayList();
-    private User currentUser;
+    public User currentUser;
     private User currentUser1;
     public void setCurrentUser(User user) {
         currentUser = user;
@@ -164,14 +149,38 @@ public class ChatRoomController {
         user.setMainController(this);
     }
 
+   /* @Override
+    public void onMessageReceived(ChatMessage message) {
+        Platform.runLater(() -> {
+            addMessageToChatRecord(message.getSender(), message.getContent(), true);
+        });
+    }*/
+
+    private ObservableList<User> observableFriendsList = FXCollections.observableArrayList();
+
+    public void sendChatMessage(ActionEvent actionEvent) {
+
+    }
+    //监听
+    public interface MessageListener {
+        void onMessageReceived(ChatMessage message);
+    }
+    private MessageListener messageListener;
+    public void setMessageListener(MessageListener messageListener) {
+        this.messageListener = messageListener;
+    }
+    @Override
+    public void onMessageReceived(ChatMessage message) {
+        Platform.runLater(() -> {
+            System.out.println("信息发送者："+message.getSender()+" 信息接收者："+activeReceiver.getId());
+            if (message.getSender().getId() == activeReceiver.getId()) {
+                addMessageToChatRecord(message.getSender(), message.getContent(), true);
+            }
+        });
+    }
     // 用于存储群聊列表的ObservableList
     private ObservableList<Group> groupList = FXCollections.observableArrayList();
     private ObservableList<ChatMessage> chatRecordList = FXCollections.observableArrayList();
-/*
-    ，首先通过 setItems 方法将 friendsListView 中的数据设置为 friendList，然后通过 setCellFactory 方法设置单元格工厂。
-    当ListView需要一个新的单元格来显示一个User对象时，这个工厂会创建一个新的ListCell对象。
-    这个ListCell对象会显示User对象的头像和昵称。如果ListCell没有User对象，就不显示任何东西。
-     */
 
     @FXML
     public void togglePin(ActionEvent event) {
@@ -187,72 +196,23 @@ public class ChatRoomController {
     // 在这个方法中初始化你的控制器
         @FXML
         private void initialize() {
+
             // 将朋友列表数据设置到ListView中
             friendsListView.setItems(friendList);
             friendsListView.setVisible(false);
             groupChatsListView.setVisible(false);
             messagesListView.setVisible(false);
+            //messagesListView1.setVisible(false);
             FriendChat.setTextFill(Color.GRAY);// 好友按钮变色
             GroupChat.setTextFill(Color.GRAY);// 群聊按钮变回去
             RequestPrompt.setFill(Color.WHITE);
             RequestPrompt.setOpacity(1.0);
-           /* ChatRecord1.setItems(chatRecordList);
-
-            ChatRecord1.setCellFactory(new Callback<ListView<ChatMessage>, ListCell<ChatMessage>>() {
-                @Override
-                public ListCell<ChatMessage> call(ListView<ChatMessage> chatMessageListView) {
-                    return new ListCell<ChatMessage>() {
-                        private ImageView imageView = new ImageView();
-                        private Label senderName = new Label();
-                        private Label timestamp = new Label();
-                        private Label content = new Label();
-
-                        private HBox header = new HBox(10, senderName, imageView);
-                        private VBox messageBox = new VBox(header, content);
-                        private BorderPane borderPane = new BorderPane();*/
-
-                        /*{
-                            header.setAlignment(Pos.TOP_RIGHT);
-                            messageBox.setAlignment(Pos.TOP_RIGHT);
-                            messageBox.setSpacing(5);
-                            borderPane.setPadding(new Insets(10));
-                            setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-
-                            // 设置背景颜色
-                            BackgroundFill backgroundFill = new BackgroundFill(Color.web("#CCCCCC"), new CornerRadii(5), Insets.EMPTY);
-                            Background background = new Background(backgroundFill);
-                            borderPane.setBackground(background);
-                        }*/
-
-
-
-                       /* @Override
-                        protected void updateItem(ChatMessage chatMessage, boolean empty) {
-                            super.updateItem(chatMessage, empty);
-
-                            if (chatMessage != null) {
-                                imageView.setImage(new Image(chatMessage.getSender().getAvatar()));
-                                imageView.setFitHeight(30);
-                                imageView.setFitWidth(30);
-
-                                senderName.setText(chatMessage.getSender().getNickname());
-                                //timestamp.setText(chatMessage.getTimestamp().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
-                                content.setText(chatMessage.getContent());
-
-                                header.getChildren().setAll(senderName, imageView);
-                                messageBox.getChildren().setAll(header, content);
-                                borderPane.setCenter(messageBox);
-
-                                setGraphic(borderPane);
-                            } else {
-                                setText(null);
-                                setGraphic(null);
-                            }
-                        }
-                    };
-                }
-            });*/
             ChatRecord1.setItems(chatRecordList);
+            ConnectionManager connectionManager = ConnectionManager.getInstance();
+            connectionManager.setMessageListener(this::onMessageReceived);
+            connectionManager.startMessageListening();
+
+
 
             ChatRecord1.setCellFactory(new Callback<ListView<ChatMessage>, ListCell<ChatMessage>>() {
                 @Override
@@ -269,10 +229,6 @@ public class ChatRoomController {
                         private VBox messageBox = new VBox(header, contentBox);
 
                         {
-                            header.setAlignment(Pos.TOP_RIGHT); //头像用户名右对齐
-                            //HBox.setHgrow(spacer, Priority.ALWAYS); // 使得 spacer 可以扩展以填充空间
-                            HBox.setHgrow(spacer, Priority.NEVER);
-                            messageBox.setAlignment(Pos.TOP_RIGHT);
                             messageBox.setSpacing(5);
                             setPadding(new Insets(10));
                             setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -286,7 +242,6 @@ public class ChatRoomController {
                             // 设置自动换行
                             content.setWrapText(true);
                             content.setMaxWidth(500);
-                            content.setAlignment(Pos.TOP_RIGHT);
                         }
 
                         @Override
@@ -298,18 +253,23 @@ public class ChatRoomController {
                                 imageView.setFitHeight(30);
                                 imageView.setFitWidth(30);
                                 senderName.setText(chatMessage.getSender().getNickname());
-                                //timestamp.setText(chatMessage.getTimestamp().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+                                System.out.println("时间："+chatMessage.getUpdatedAt());
+                               // timestamp.setText(chatMessage.getUpdatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
                                 content.setText(chatMessage.getContent());
-                                System.out.println("发送者："+chatMessage.getSender());
-                                if (chatMessage.getSender().equals(currentUser)) {
+
+                                if (chatMessage.getSender().getId() == currentUser.getId()) {
                                     // 如果是当前用户发送的消息，则将气泡的对齐方式设置为右对齐
-                                    contentBox.setAlignment(Pos.TOP_LEFT);
-                                    contentBox.setPadding(new Insets(5, 5, 5, 0));
-                                    header.getChildren().setAll(spacer, timestamp, senderName, imageView);
+                                    header.setAlignment(Pos.CENTER_RIGHT);
+                                    contentBox.setAlignment(Pos.CENTER_RIGHT);
+                                    content.setAlignment(Pos.CENTER_RIGHT);
+                                    HBox.setHgrow(spacer, Priority.ALWAYS);
+                                    header.getChildren().setAll(spacer, imageView, senderName, timestamp);
                                 } else {
                                     // 如果是其他用户发送的消息，则将气泡的对齐方式设置为左对齐
-                                    contentBox.setAlignment(Pos.TOP_RIGHT);
-                                    contentBox.setPadding(new Insets(5, 0, 5, 5));
+                                    header.setAlignment(Pos.CENTER_LEFT);
+                                    contentBox.setAlignment(Pos.CENTER_LEFT);
+                                    content.setAlignment(Pos.CENTER_LEFT);
+                                    HBox.setHgrow(spacer, Priority.ALWAYS);
                                     header.getChildren().setAll(imageView, senderName, timestamp, spacer);
                                 }
 
@@ -317,8 +277,6 @@ public class ChatRoomController {
                                 content.setPrefWidth(contentWidth);
                                 contentBox.setPrefWidth(contentWidth + 10); // +10 用于添加气泡的边距
 
-
-                                header.getChildren().setAll(spacer, imageView, senderName, timestamp);
                                 messageBox.getChildren().setAll(header, contentBox);
                                 setGraphic(messageBox);
                             } else {
@@ -329,22 +287,9 @@ public class ChatRoomController {
                     };
                 }
             });
-            sendButton.setOnAction(event -> {
-                if (currentUser == null) {
-                    // 如果没有选择聊天对象，不发送消息
-                    return;
-                }
-                String messageText = messageInput.getText().trim();
-                if (!messageText.isEmpty()) {
-                    // 发送请求到服务器
-                    String request = "sendMessage:" + currentUser.getId() + ":" + receiverId + ":" + messageText;
-                    sendRequestToServer(request);
 
-                    // 将消息添加到聊天记录列表中
-                    addMessageToChatRecord(currentUser, messageText, true);
-                    messageInput.clear();
-                }
-            });
+
+
             // 设置列表的单元格工厂
             friendsListView.setCellFactory(new Callback<ListView<User>, ListCell<User>>() {
                 @Override
@@ -362,9 +307,9 @@ public class ChatRoomController {
 
                         {
                             // 为每个MenuItem设置一个事件处理器，当点击菜单项时会被触发
+                            // 在这里添加发送消息的代码
                             sendMessageItem.setOnAction(event -> {
                                 User user = getItem();
-                                // 在这里添加发送消息的代码
                                 System.out.println("发送消息按钮被点击：" + user.getUsername());
                                 System.out.println("发送消息按钮被点击：" + user.getNickname());
                                 // 在右侧显示聊天界面和被选中的好友的用户名
@@ -373,7 +318,7 @@ public class ChatRoomController {
                                 System.out.println("发送消息按钮被点击：");
                                 // 设置接收者的ID
                                 receiverId = user.getId();
-                                //activeReceiver = user;
+
                                 // 清除之前的聊天记录并加载当前接收者的聊天记录
                                 if (activeReceiver != user) {
                                     chatRecordList.clear();
@@ -381,6 +326,7 @@ public class ChatRoomController {
                                     // 在这里添加加载当前接收者聊天记录的代码
                                 }
                             });
+
 
                             viewProfileItem.setOnAction(event -> {
                                 User user = getItem();
@@ -466,6 +412,29 @@ public class ChatRoomController {
                     };
                 }
             });
+            sendButton.setOnAction(event -> {
+                if (receiverId == 0) {
+                    // 如果没有选择聊天对象，不发送消息
+                    return;
+                }
+                String messageText = messageInput.getText().trim();
+                if (!messageText.isEmpty()) {
+                    // 使用长连接发送请求到服务器
+                    // 获取当前时间并格式化为字符串
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                    LocalDateTime currentTime = LocalDateTime.now();
+                    String currentTimeStr = currentTime.format(formatter);
+                    System.out.println(currentTime);
+                    // 添加当前时间到发送的请求字符串中
+                    String request = "sendMessageLongConnection:" + currentUser.getId() + ":" + receiverId + ":" + messageText + "," + currentTimeStr;
+                    connectionManager.getOut().println(request);
+
+                    // 将消息添加到聊天记录列表中
+                    addMessageToChatRecord(currentUser, messageText, true);
+                    messageInput.clear();
+                }
+            });
+
             // 在initialize方法中，将群聊列表数据设置到ListView中
             groupChatsListView.setItems(groupList);
             // 设置列表的单元格工厂
@@ -528,32 +497,41 @@ public class ChatRoomController {
             });
         }
 
-    private void sendRequestToServer(String request) {
-        try (Socket socket = new Socket("127.0.0.1", 6000);
-             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
-            // 向服务器发送请求
-            out.println(request);
-
-            // 从服务器接收响应
-            String response = in.readLine();
-            System.out.println("服务器响应：" + response);
-
-        } catch (IOException e) {
-            e.printStackTrace();
+    private void addMessageToChatRecord(User sender, String content, boolean isSentByCurrentUser) {
+        ChatMessage chatMessage = new ChatMessage(sender, content);
+        if (isSentByCurrentUser) {
+            chatMessage.setSentByCurrentUser(true);
         }
-    }
-
-    private void addMessageToChatRecord(User sender, String content, boolean isCurrentUser) {
-        // 如果消息来自当前聊天对象，将消息添加到聊天记录列表中
-        ChatMessage chatMessage = new ChatMessage(sender, content, isCurrentUser);
         chatRecordList.add(chatMessage);
     }
+
 
     @FXML
     void searchField1(ActionEvent event) {
 
+    }
+    public void receiveMessage(int senderId, String messageContent) {
+        System.out.println("查找到的Id:"+senderId);
+        // 根据senderId从好友列表中查找User对象
+        User sender = findUserById(senderId);
+        System.out.println("从好友表里面查找到的好友："+sender);
+        if (sender != null) {
+            // 如果找到了发送者，将消息添加到聊天记录中，并刷新聊天界面
+            System.out.println("发送者："+sender+"发送的消息:"+messageContent);
+            addMessageToChatRecord(sender, messageContent, false);
+        } else {
+            System.out.println("无法找到发送者：" + senderId);
+        }
+    }
+
+    private User findUserById(long userId) {
+        for (User user : observableFriendsList) {
+            if (user.getId() == userId) {
+                return user;
+            }
+        }
+        return null;
     }
 
     @FXML
@@ -601,46 +579,6 @@ public class ChatRoomController {
         }
     }
 
-   /*void FriendsTab(ActionEvent event) {
-        // 设置好友列表控件为可见
-        friendsListView.setVisible(true);
-        // 在控制台打印一条消息，表示这个方法被调用了
-        System.out.println("查看好友列表被点击");
-
-        // 创建一个新的 Task 对象
-        Task<List<User>> getFriendsTask = new Task<List<User>>() {
-            @Override
-            protected List<User> call() throws Exception {
-                // 将与服务器通信的代码移到 call 方法中
-                List<User> friendList = new ArrayList<>();
-                try (Socket socket = new Socket("127.0.0.1", 6001);
-                     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                     BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-
-                    out.println("getFriends:" + currentUser.getId());
-
-                    String friendJson = in.readLine();
-                    Gson gson = new Gson();
-                    while (friendJson != null&&!friendJson.equals("end_of_friends")) {
-                        System.out.println("客户端收到的：" + friendJson);
-                        User friend = gson.fromJson(friendJson, User.class);
-                        friendList.add(friend);
-                        friendJson = in.readLine();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                return friendList;
-            }
-        };
-
-        // 当任务完成时，更新 UI
-        getFriendsTask.setOnSucceeded(event1 -> updateFriendsList(getFriendsTask.getValue()));
-
-        // 启动任务
-        new Thread(getFriendsTask).start();
-    }*/
-
     // 更新好友列表的方法
     public void updateFriendsList(List<User> newFriends) {
         // 清空旧的好友列表
@@ -648,7 +586,12 @@ public class ChatRoomController {
         // 将新的好友列表添加到ObservableList中
         friendList.addAll(newFriends);
         // 更新ListView，这会将新的好友列表显示出来
-        // friendListView.refresh();
+        //friendListView.refresh();
+        // 清空旧的好友列表
+        observableFriendsList.clear();
+        // 将新的好友列表添加到ObservableList中
+        observableFriendsList.addAll(newFriends);
+        // 更新ListView，这会将新的好友列表显示出来
     }
 
     @FXML
@@ -707,6 +650,7 @@ public class ChatRoomController {
         // 更新ListView，这会将新的群聊列表显示出来
         groupChatsListView.refresh();
     }
+
 
 
     @FXML
@@ -890,20 +834,12 @@ public class ChatRoomController {
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))){
             //发送退出请求
             out.println("logout:"+currentUser.getUsername());
+            ConnectionManager connectionManager = ConnectionManager.getInstance();
+            connectionManager.stopMessageListening();
+            // 关闭 JavaFX 应用程序
+            Platform.exit();
         }
         System.out.println("用户："+currentUser.getUsername()+" 退出登录");
-        /*try {
-            Stage stage = (Stage) exitButton.getScene().getWindow();
-            stage.close();
-            Stage stage1 = new Stage();
-            childStages.add(stage1);//将子类窗口添加进来
-            Parent root = FXMLLoader.load(getClass().getResource("/fxml/Login.fxml"));
-            stage1.setTitle("聊天室");
-            stage1.setScene(new Scene(root));
-            stage1.show();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }       */
         Stage stage = (Stage) exitButton.getScene().getWindow();
         stage.close();
     }
@@ -1123,7 +1059,7 @@ public class ChatRoomController {
                 try {
                     String response = connectionManager.getIn().readLine();
 
-                    System.out.println("长连接响应：" + response);
+                    System.out.println("长连接响应1：" + response);
                     if ("newRequest".equals(response)) {
                         System.out.println("修改了成功");
                         Platform.runLater(() -> {
@@ -1137,17 +1073,6 @@ public class ChatRoomController {
                         RequestPrompt.setOpacity(0.0);
                     }
 
-                    if (activeReceiver != null) {
-                        // 发送请求到服务器以检查新消息
-                        //String request = "checkForNewMessages:" + currentUser.getId() + ":" + activeReceiver.getId();
-                        //sendRequestToServer1(request);
-                       // System.out.println("hello");
-                        ChatMessage newMessage = getNewMessageFromServer1(); //短连接
-                        //ChatMessage newMessage = getNewMessageFromServer(); // 长连接吧
-                        //System.out.println("哈哈哈哈哈哈哈哈哈哈："+newMessage.getSender()+" "+newMessage.getContent());
-                        Platform.runLater(() -> handleMessageFromServer(newMessage));
-                    }
-
                 } catch (IOException e) {
                     //e.printStackTrace();
                 }
@@ -1157,90 +1082,7 @@ public class ChatRoomController {
         timeline.play();
     }
 
-
-    private ChatMessage getNewMessageFromServer1() throws IOException {
-        try(Socket socket = new Socket("127.0.0.1",6000);
-        PrintWriter out = new PrintWriter(socket.getOutputStream(),true);
-        BufferedReader in =new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-            System.out.println("当前登入者："+currentUser.getId()+" 活跃者："+activeReceiver.getId());
-            out.println("checkForNewMessages:" + currentUser.getId() + ":" + activeReceiver.getId());
-            String newMessageLine =in.readLine();
-            System.out.println("服务端传回来的："+newMessageLine);
-            if (newMessageLine != null && !newMessageLine.isEmpty()) {
-                String[] messageParts = newMessageLine.split(":", 3);
-                System.out.println("长度："+messageParts.length);
-                if (messageParts.length == 3) {
-                    String senderId = messageParts[0];
-                    System.out.println("用户："+currentUser.getId() +"收到："+ senderId+"发来的一条"+messageParts[2]);
-                    String receiverId = messageParts[1];
-                    System.out.println("接收者：" + receiverId);
-                    String messageContent = messageParts[2];
-                    System.out.println("接收的消息：" + messageContent);
-
-                    // 一个从ID获取User对象的方法
-                    User sender = getUserById(senderId);
-                    User receiver = getUserById(receiverId);
-                    System.out.println("发送者:" + sender + "  " + "接收者" + receiver);
-
-                    if (sender != null && receiver != null) {
-                        return new ChatMessage(sender, receiver, messageContent);
-                    }
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-   private ChatMessage getNewMessageFromServer() {
-       try {
-           String newMessageLine = connectionManager.getIn().readLine();
-           System.out.println("服务端收到：" + newMessageLine);
-           if (newMessageLine != null) {
-               String[] messageParts = newMessageLine.split(":", 3);
-               if (messageParts.length == 3) {
-                   String senderId = messageParts[0];
-                   System.out.println("发送者：" + senderId);
-                   String receiverId = messageParts[1];
-                   System.out.println("接收者：" + receiverId);
-                   String messageContent = messageParts[2];
-                   System.out.println("消息：" + messageContent);
-
-                   User sender = getUserById(senderId);
-                   User receiver = getUserById(receiverId);
-                   System.out.println("发送者:" + sender + "  " + "接收者" + receiver);
-
-                   if (sender != null && receiver != null) {
-                       return new ChatMessage(sender, receiver, messageContent);
-                   }
-               }
-           }
-       } catch (IOException e) {
-           e.printStackTrace();
-       }
-       return null;
-   }
-    // 发送请求到服务器
-    private void sendRequestToServer1(String request) {
-        connectionManager.getOut().println(request);
-    }
-    private void handleMessageFromServer(ChatMessage message) {
-        //System.out.println("发送者在这里："+message.getSender().getId());
-       // System.out.println("当前获得者在这里: "+activeReceiver.getId());
-       // System.out.println(message.getSender().getId()==activeReceiver.getUsername());
-       // System.out.println(message.getSender().equals(activeReceiver));
-        //System.out.println(message.getSender().getUsername());
-        //System.out.println(activeReceiver.getUsername());
-        if (message != null && message.getSender().getUsername1().equals(activeReceiver.getUsername())) {
-            // 如果消息来自当前聊天对象，将消息添加到聊天记录列表中
-            System.out.println("添加成功！！！");
-            //addMessageToChatRecord(message.getSender(), message.getContent(), false);
-            addMessageToChatRecord(activeReceiver, message.getContent(), false);
-        }
-    }
-
-    private User getUserById(String id) throws IOException {
+    public User getUserById(String id) throws IOException {
         try (Socket socket = new Socket("127.0.0.1",6000);
              PrintWriter out = new PrintWriter(socket.getOutputStream(),true);
              BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))){
@@ -1266,17 +1108,11 @@ public class ChatRoomController {
         }
         return null;
     }
-
     // 设置 ConnectionManager 对象
     public void setConnectionManager(ConnectionManager connectionManager) {
         this.connectionManager = connectionManager;
-        startPeriodicTask(); // 在设置 ConnectionManager 对象后启动周期检测
+        //startPeriodicTask(); // 在设置 ConnectionManager 对象后启动周期检测
     }
-
-    public void sendChatMessage(ActionEvent actionEvent) {
-
-    }
-
 }
 
 

@@ -144,9 +144,9 @@ public class ServerHandler implements Runnable {
                     System.out.println("查看群聊："+requestParts1[1]);
                     handleGetGroupsRequest(out, requestParts1[1]);
                     break;
-                case "checkForNewMessages": // 处理检查新消息请求
+                /*case "checkForNewMessages": // 处理检查新消息请求
                     handleCheckForNewMessages(out, requestParts);
-                    break;
+                    break;*/
                 case "getUserById":
                     handleGetUserById(out,requestParts);
                     break;
@@ -374,6 +374,10 @@ public class ServerHandler implements Runnable {
     private synchronized void handleLogout(String username) {
         // 设置用户状态为离线
         dbConnection.setUserStatus(username, "offline");
+        // 从 userConnectionsMap 中移除用户连接
+        ServerHandlerLongConnection.userConnectionsMap.remove(username);
+        // 从 socketUserIdMap 中移除对应的 Socket
+        ServerHandlerLongConnection.socketUserIdMap.remove(socket);
         System.out.println("用户：" + username + "退出登录");
     }
 

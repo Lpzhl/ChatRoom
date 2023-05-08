@@ -38,6 +38,16 @@ public class User1 {
         this.username = username;
     }
 
+    public User1(int id, String username, String password, String email, String avatar, String status,String signature) {
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.email = email;
+        this.avatar =avatar;
+        this.status =status;
+        this.signature = signature;
+    }
+
 
     public int getId() {
         return id;

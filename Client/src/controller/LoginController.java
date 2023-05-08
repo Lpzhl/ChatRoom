@@ -3,6 +3,7 @@ package controller;
 import Util.ConnectionManager;
 import client.User;
 import com.google.gson.Gson;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -124,6 +125,10 @@ public class LoginController {
             //发送退出请求
             out.println("logout:"+username);
             System.out.println("发送退出请求："+username);
+            ConnectionManager connectionManager = ConnectionManager.getInstance();
+            connectionManager.stopMessageListening();
+            // 关闭 JavaFX 应用程序
+            Platform.exit();
         }
     }
 
@@ -163,6 +168,7 @@ public class LoginController {
 
             // 将当前登录的用户传递给聊天室控制器
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/Chatmenuinterface.fxml"));
+
             Parent root = fxmlLoader.load();
             ChatRoomController chatController = fxmlLoader.getController();
             // 将 ConnectionManager 对象传递给聊天室控制器

@@ -29,6 +29,91 @@ public class DatabaseConnection {
         }
     }
 
+
+    public int insertMessage(int senderId, int receiverId, String messageContent) {
+        String insertMessageQuery = "INSERT INTO messages (sender_id, receiver_id, content, content_type) VALUES (?, ?, ?, 'text')";
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(insertMessageQuery, Statement.RETURN_GENERATED_KEYS)) {
+            preparedStatement.setInt(1, senderId);
+            preparedStatement.setInt(2, receiverId);
+            preparedStatement.setString(3, messageContent);
+            preparedStatement.executeUpdate();
+
+            // 获取插入消息的id
+            try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    return generatedKeys.getInt(1);
+                } else {
+                    throw new SQLException("插入消息失败，无法获取生成的ID。");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return -1;
+        }
+    }
+   /* public List<ChatMessage1> getUnreadMessages(int userId) {
+        List<ChatMessage1> unreadMessages = new ArrayList<>();
+
+        String query = "SELECT messages.* FROM messages INNER JOIN chat_records ON messages.id = chat_records.message_id WHERE chat_records.user_id = ? AND chat_records.read_status = 'unread'";
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, userId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    int messageId = resultSet.getInt("id");
+                    int senderId = resultSet.getInt("sender_id");
+                    String content = resultSet.getString("content");
+                    User1 sender = getUserById(senderId);
+                    ChatMessage1 message = new ChatMessage1(sender, content,false);
+                    unreadMessages.add(message);
+                }
+            }
+
+            // Mark messages as read
+            markMessagesAsRead(userId);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return unreadMessages;
+    }*/
+
+
+    public void markMessagesAsRead(int userId) {
+        try {
+            String query = "UPDATE chat_records SET read_status = 'read' WHERE user_id = ? AND read_status = 'unread'";
+            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, userId);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public boolean insertChatRecords(int senderId, int receiverId, int messageId) {
+        String insertChatRecordQuery = "INSERT INTO chat_records (user_id, message_id, read_status) VALUES (?, ?, ?)";
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(insertChatRecordQuery)) {
+            preparedStatement.setInt(1, senderId);
+            preparedStatement.setInt(2, messageId);
+            preparedStatement.setString(3, "read");
+            preparedStatement.executeUpdate();
+
+            preparedStatement.setInt(1, receiverId);
+            preparedStatement.setInt(2, messageId);
+            preparedStatement.setString(3, "unread");
+            preparedStatement.executeUpdate();
+
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
     public User1 getUserById1(int userId) {
         String query = "SELECT id, username FROM users WHERE id = ?";
 
@@ -56,12 +141,12 @@ public class DatabaseConnection {
                 "ORDER BY m.created_at ASC";
 
         List<ChatMessage1> unreadMessages = new ArrayList<>();
-        System.out.println("有东西吗666：：：");
+        //System.out.println("有东西吗666：：：");
         try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setInt(1, userId);
             pstmt.setInt(2, activeReceiverId);
-            System.out.println("有东西吗：：：");
+            //System.out.println("有东西吗：：：");
             ResultSet rs = pstmt.executeQuery();
             System.out.println(rs);
             while (rs.next()) {
@@ -75,7 +160,7 @@ public class DatabaseConnection {
                 // 这里假设您有一个从ID获取User对象的方法
                 User1 sender = getUserById(senderId);
                 User1 receiver = getUserById(receiverId);
-                System.out.println("有东西吗655：：：");
+               // System.out.println("有东西吗655：：：");
 
                 if (sender != null && receiver != null) {
                     Message1 message = new Message1(id, senderId, receiverId, null, content, contentType, createdAt);
@@ -964,6 +1049,34 @@ public class DatabaseConnection {
             }
             return false;
     }
+
+    public List<User1> getFriendsList(int userId) {
+        List<User1> friends = new ArrayList<>();
+        try {
+            String query = "SELECT users.* FROM friends INNER JOIN users ON friends.friend_id = users.id WHERE friends.user_id = ?";
+            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            PreparedStatement pstmt = connection.prepareStatement(query);
+            pstmt.setInt(1, userId);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String username = rs.getString("username");
+                String password = rs.getString("password");
+                String email = rs.getString("email");
+                String avatar = rs.getString("avatar");
+                String status = rs.getString("status");
+                String signature = rs.getString("signature");
+
+                User1 friend = new User1(id, username, password, email, avatar, status,signature);
+                friends.add(friend);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return friends;
+    }
+
 }
 
 /*
