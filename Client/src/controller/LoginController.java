@@ -19,6 +19,7 @@ import javafx.stage.WindowEvent;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.Properties;
 
 
@@ -118,18 +119,26 @@ public class LoginController {
     }
     // 当用户点击登录按钮时触发
     private void sendLogoutMessage(String username) throws IOException {
-        // 这里是向服务器发送注销消息的代码
-        try(Socket socket = new Socket("127.0.0.1",6000);
-            PrintWriter out = new PrintWriter(socket.getOutputStream(),true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))){
-            //发送退出请求
-            out.println("logout:"+username);
-            System.out.println("发送退出请求："+username);
-            ConnectionManager connectionManager = ConnectionManager.getInstance();
-            connectionManager.stopMessageListening();
-            // 关闭 JavaFX 应用程序
-            Platform.exit();
-        }
+        new Thread(()->{  // 这里是向服务器发送注销消息的代码
+            try (Socket socket = new Socket("127.0.0.1", 6000);
+                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+                //发送退出请求
+                out.println("logout:" + username);
+                System.out.println("发送退出请求：" + username);
+                // 关闭 JavaFX 应用程序
+                ConnectionManager connectionManager = ConnectionManager.getInstance();
+                connectionManager.stopMessageListening();
+                connectionManager.shutdown(); // 添加这行
+                ChatRoomController controller = ChatRoomController.getInstance();
+                controller.stopPeriodicTask();
+                Platform.exit();
+            } catch (UnknownHostException e) {
+                throw new RuntimeException(e);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
     }
 
     private static final User USER_ALREADY_LOGGED_IN = new User();

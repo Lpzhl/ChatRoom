@@ -5,16 +5,20 @@ import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import server.ChatMessage1;
 import server.Group1;
+import server.Request1;
 import server.User1;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.reflect.Type;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -125,6 +129,12 @@ public class ServerHandler implements Runnable {
                 case "rejectFriendRequest":// 处理拒绝好友请求
                     handleRejectFriendRequest(out, requestParts1[1]);
                     break;
+                case "acceptGroupRequest":
+                    handleAcceptGroupRequest(out, requestParts1[1]);
+                    break;
+                case "rejectGroupRequest":
+                    handleRejectGroupRequest(out, requestParts1[1]);
+                    break;
                 case "sendMessage":
                     handleSendMessage(out, requestParts);
                     break;
@@ -133,6 +143,9 @@ public class ServerHandler implements Runnable {
                     break;*/
                 case "findUser":// 处理查看好友列表请求
                     handleFindUser(out, requestParts);
+                    break;
+                case "findGroup"://
+                    handleFindGroup(out, requestParts);
                     break;
                 case "getFriends":// 处理查找好友请求
                     handleGetFriendsList(out, requestParts);
@@ -150,11 +163,17 @@ public class ServerHandler implements Runnable {
                 case "getUserById":
                     handleGetUserById(out,requestParts);
                     break;
+                case "sendGroupRequest":
+                    // 加入群聊请求
+                    handleJoinGroupRequest(out,requestParts1);
+                    break;
+                case "deleteRequest":
+                    handleDeleteRequest(out, requestParts);
                 default:
                     out.println("error");
                     break;
             }
-        } catch (IOException e) {
+        } catch (IOException | SQLException e) {
             e.printStackTrace();
         } finally {
             // 关闭输出流
@@ -182,6 +201,79 @@ public class ServerHandler implements Runnable {
 
     }
 
+    private void handleAcceptGroupRequest(PrintWriter out, String requestPart) {
+        Gson gson = new Gson();
+        Type type = new TypeToken<HashMap<String, String>>() {}.getType();
+        HashMap<String, String> map = gson.fromJson(requestPart, type);
+        long userId = Long.parseLong(map.get("userId"));
+        int groupId = Integer.parseInt(map.get("groupId"));
+
+        // 检查用户是否已经是群组的成员
+        if (dbConnection.isUserInGroup(userId, groupId)) {
+            out.println("failure: user is already in the group");
+        } else {
+            boolean result = dbConnection.acceptGroupRequest(userId, groupId);
+            out.println(result ? "success" : "failure");
+        }
+    }
+
+
+    private void handleRejectGroupRequest(PrintWriter out, String requestPart) {
+        Gson gson = new Gson();
+        Type type = new TypeToken<HashMap<String, String>>() {}.getType();
+        HashMap<String, String> map = gson.fromJson(requestPart, type);
+        long userId = Long.parseLong(map.get("userId"));
+        int groupId = Integer.parseInt(map.get("groupId"));
+        boolean result = dbConnection.rejectGroupRequest(userId, groupId);
+        out.println(result ? "success" : "failure");
+    }
+
+    private void handleDeleteRequest(PrintWriter out, String[] respond) {
+        System.out.println("删除请求：" + respond[1] + " -> " + respond[2]);
+        boolean result =false;
+        System.out.println("长度："+respond.length);
+        if(respond.length==5) {
+            result = dbConnection.deleteRequest(respond[1], respond[2], respond[3], Integer.valueOf(respond[4]));
+        }else{
+            result = dbConnection.deleteRequest(respond[1], respond[2], respond[3], null);
+        }
+        out.println(result ? "success" : "failure");
+    }
+
+    private void handleJoinGroupRequest(PrintWriter out,String[] requestJson ) throws SQLException {
+        System.out.println("进来了吗："+requestJson[1]);
+        // 将JSON字符串解析成map对象
+        Gson gson = new Gson();
+        Map<String, String> requestMap = gson.fromJson(requestJson[1], new TypeToken<Map<String, String>>(){}.getType());
+        // 获取请求参数
+        System.out.println("requestMap:"+requestMap);
+        String username = requestMap.get("username");
+        System.out.println("username："+username);
+        String name_id = requestMap.get("groupname");
+        System.out.println("name_id："+name_id);
+        // 查询是否存在该用户和该群聊
+            // 判断用户是否已经加入了该群聊
+        if(username==null||name_id==null){
+            out.println("error");
+            System.out.println("1");
+            return;
+
+        }
+        if(dbConnection.isMemberOfGroup(username, name_id)) {
+            // 用户已经加入了该群聊
+            System.out.println("2");
+            out.println("failure1");
+            return;
+        }
+        boolean isSuccess = dbConnection.sendGroupRequest(username,name_id);
+        if(isSuccess){
+            System.out.println("3");
+            out.println("success");
+        }else {
+            System.out.println("4");
+            out.println("error");
+        }
+    }
     private void handleCheckForNewMessages(PrintWriter out, String[] requestParts) {
         if (requestParts.length == 3) {
 
@@ -475,14 +567,13 @@ public class ServerHandler implements Runnable {
 
 
     private void handleGetRequestList(PrintWriter out, String username) {
-        System.out.println("用户的信息列表："+username);
-        List<String> requestList = dbConnection.getRequestList(username);
+        System.out.println("用户的信息列表：" + username);
+        List<Request1> requestList = dbConnection.getRequestList(username);
         Gson gson = new Gson();
         String response = gson.toJson(requestList);
-        System.out.println("信息列表序列化后："+response);
+        System.out.println("信息列表序列化后：" + response);
         out.println(response);
     }
-
     private void handleAcceptFriendRequest(PrintWriter out, String request) {
         Gson gson = new Gson();
         Map<String, String> requestMap = gson.fromJson(request, new TypeToken<Map<String, String>>() {}.getType());
@@ -578,6 +669,26 @@ public class ServerHandler implements Runnable {
             // 将用户信息转换为JSON对象
             Gson gson = new Gson();
             String userJson = gson.toJson(user);
+            out.println("success:" + userJson);
+        } else {
+            out.println("error:user not found");
+        }
+    }
+
+    //处理添加群聊
+    private void handleFindGroup(PrintWriter out, String[] requestParts) {
+        if (requestParts.length != 2) {
+            out.println("error:invalid request format");
+            return;
+        }
+        // 从请求中获取用户名
+        String name_id = requestParts[1];
+        // 查找用户
+        Group1 group1 = dbConnection.findGroup1(name_id);
+        if (group1 != null) {
+            // 将用户信息转换为JSON对象
+            Gson gson = new Gson();
+            String userJson = gson.toJson(group1);
             out.println("success:" + userJson);
         } else {
             out.println("error:user not found");
@@ -783,14 +894,17 @@ public class ServerHandler implements Runnable {
         // 如果邮箱和验证码匹配，返回"success"，否则返回"fail"
         if (dbConnection.emailExists(email)) {
             User1 user1 = dbConnection.getUserByEmail(email);
+            System.out.println("电子邮箱："+email);
             String username = user1.getUsername();
-            dbConnection.setUserStatus(username, "online");
+            System.out.println("账号："+username);
             String status = dbConnection.getUserStatus(username);
+            System.out.println("用户状态："+status);
             if (status.equals("online")) {
                 out.println("error:该用户已经登录");
                 System.out.println("该用户状态："+status);
                 return;
             }
+            dbConnection.setUserStatus(username, "online");
             User1 user2 = dbConnection.getUserByEmail(email);
             System.out.println("邮箱登录："+user2);
             //更新在线状态

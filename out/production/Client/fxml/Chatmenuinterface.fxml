@@ -24,7 +24,7 @@
                <!-- 左侧列 -->
                <AnchorPane prefHeight="682.0" prefWidth="142.0">
                   <children>
-                      <VBox alignment="CENTER" fillWidth="true" maxWidth="142.0" minWidth="142.0" prefHeight="682.0" prefWidth="142.0" spacing="10" style="-fx-background-color: #75FA8D;" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                      <VBox alignment="CENTER" fillWidth="true" maxWidth="120.0" minWidth="120.0" prefHeight="682.0" prefWidth="120.0" spacing="10" style="-fx-background-color: #75FA8D;" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                           <children>
                               <HBox alignment="CENTER" prefHeight="128.0" prefWidth="139.0">
                                   <children>
@@ -144,14 +144,31 @@
                <!-- 右侧列 -->
                <AnchorPane prefHeight="682.0" HBox.hgrow="ALWAYS">
                    <children>
-                       <ListView fx:id="ChatRecord1" layoutX="1.0" layoutY="93.0" prefHeight="503.0" prefWidth="594.0" AnchorPane.bottomAnchor="205.0" AnchorPane.leftAnchor="1.0" AnchorPane.rightAnchor="1.0" AnchorPane.topAnchor="93.0" />
-                       <TextArea fx:id="messageInput" layoutY="474.0" prefHeight="208.0" prefWidth="595.0" wrapText="true" AnchorPane.bottomAnchor="-2.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="1.0" />
+                  <ImageView fx:id="Home" fitHeight="753.0" fitWidth="593.0" pickOnBounds="true" preserveRatio="true">
+                     <image>
+                        <Image url="@../image/背景换行.png" />
+                     </image>
+                  </ImageView>
+                       <ListView fx:id="ChatRecord1" layoutY="94.0" prefHeight="492.0" prefWidth="594.0" AnchorPane.bottomAnchor="215.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="2.0" AnchorPane.topAnchor="94.0" />
+                       <TextArea fx:id="messageInput" layoutX="1.0" layoutY="593.0" prefHeight="171.0" prefWidth="595.0" wrapText="true" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="1.0" AnchorPane.rightAnchor="0.0" />
                        <Button fx:id="sendButton" layoutX="482.0" layoutY="611.0" onAction="#sendChatMessage" opacity="0.74" prefHeight="40.0" prefWidth="123.0" text="发送" wrapText="true" AnchorPane.bottomAnchor="21.0" AnchorPane.rightAnchor="15.0" />
-                       <Label fx:id="PeopleName" layoutX="230.0" layoutY="35.0" prefHeight="42.0" prefWidth="182.0" text="用户名">
+                       <Label fx:id="PeopleName" layoutX="230.0" layoutY="35.0" prefHeight="42.0" prefWidth="271.0" text="用户名">
                            <font>
                                <Font size="21.0" />
                            </font>
                        </Label>
+                  <ImageView fx:id="Emoticons" fitHeight="39.0" fitWidth="34.0" layoutX="22.0" layoutY="591.0" pickOnBounds="true" preserveRatio="true">
+                     <image>
+                        <Image url="@../image/表情.png" />
+                     </image>
+                  </ImageView>
+                  <Button fx:id="SendEmoticons" layoutX="22.0" layoutY="584.0" mnemonicParsing="false" prefHeight="49.0" prefWidth="49.0" style="-fx-background-color: transparent;" />
+                  <ImageView fx:id="File" fitHeight="45.0" fitWidth="42.0" layoutX="83.0" layoutY="588.0" pickOnBounds="true" preserveRatio="true">
+                     <image>
+                        <Image url="@../image/文件夹.png" />
+                     </image>
+                  </ImageView>
+                  <Button fx:id="SendFile" layoutX="86.0" layoutY="584.0" mnemonicParsing="false" opacity="0.0" prefHeight="49.0" prefWidth="35.0" />
                    </children>
                </AnchorPane>
            </children>

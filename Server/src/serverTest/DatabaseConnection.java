@@ -1,15 +1,14 @@
 package serverTest;
 
-import server.ChatMessage1;
-import server.Group1;
-import server.Message1;
-import server.User1;
+import server.*;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.math.BigInteger;
 import java.sql.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,14 +29,153 @@ public class DatabaseConnection {
     }
 
 
-    public int insertMessage(int senderId, int receiverId, String messageContent) {
-        String insertMessageQuery = "INSERT INTO messages (sender_id, receiver_id, content, content_type) VALUES (?, ?, ?, 'text')";
+    public boolean isUserInGroup(long userId, int groupId) {
+        String query = "SELECT * FROM group_members WHERE user_id = ? AND group_id = ?";
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setLong(1, userId);
+            preparedStatement.setInt(2, groupId);
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            // 如果resultSet有数据，表示用户已经是群组的成员
+            if (resultSet.next()) {
+                return true;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        // 如果没有查询到数据或查询过程中出现异常，表示用户不是群组的成员
+        return false;
+    }
+
+    public boolean acceptGroupRequest(long userId, int groupId) {
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+            String updateRequestSql = "UPDATE requests SET status = 'accepted' WHERE sender_id = ? AND group_id = ?";
+            PreparedStatement updateRequestStmt = conn.prepareStatement(updateRequestSql);
+            updateRequestStmt.setLong(1, userId);
+            updateRequestStmt.setInt(2, groupId);
+            int updatedRows = updateRequestStmt.executeUpdate();
+
+            if (updatedRows > 0) {
+                String insertGroupMemberSql = "INSERT INTO group_members (group_id, user_id, role, status) VALUES (?, ?, 'member', 'active')";
+                PreparedStatement insertGroupMemberStmt = conn.prepareStatement(insertGroupMemberSql);
+                insertGroupMemberStmt.setInt(1, groupId);
+                insertGroupMemberStmt.setLong(2, userId);
+                int insertedRows = insertGroupMemberStmt.executeUpdate();
+                return insertedRows > 0;
+            } else {
+                return false;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean rejectGroupRequest(long userId, int groupId) {
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+            String updateRequestSql = "UPDATE requests SET status = 'rejected' WHERE sender_id = ? AND group_id = ?";
+            PreparedStatement updateRequestStmt = conn.prepareStatement(updateRequestSql);
+            updateRequestStmt.setLong(1, userId);
+            updateRequestStmt.setInt(2, groupId);
+            return updateRequestStmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // 定义一个方法，接收两个用户 ID 作为参数，返回两个用户之间的聊天历史记录
+    public List<ChatMessage1> getChatHistory(int userId, int friendId) {
+        // 创建一个列表，用于存储聊天历史记录
+        List<ChatMessage1> chatHistory = new ArrayList<>();
+
+        String sql = "SELECT m.id, m.sender_id, m.receiver_id, m.content, m.created_at, u1.username AS sender_username, u2.username AS receiver_username, u1.avatar AS sender_avatar, u2.avatar AS receiver_avatar, u1.nickname AS sender_nickname, u2.nickname AS receiver_nickname " +
+                "FROM messages m " +
+                "JOIN users u1 ON m.sender_id = u1.id " +
+                "JOIN users u2 ON m.receiver_id = u2.id " +
+                "WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) " +
+                "ORDER BY m.created_at";
+
+
+
+        // 创建数据库连接
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             // 使用 PreparedStatement 对象设置 SQL 语句的参数，并执行查询
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            statement.setInt(2, friendId);
+            statement.setInt(3, friendId);
+            statement.setInt(4, userId);
+
+            // 获取查询结果
+            try (ResultSet resultSet = statement.executeQuery()) {
+                // 遍历查询结果
+                while (resultSet.next()) {
+                    // 从结果集中获取各个字段的值
+                    int id = resultSet.getInt("id");
+                    int senderId = resultSet.getInt("sender_id");
+                    int receiverId = resultSet.getInt("receiver_id");
+                    String content = resultSet.getString("content");
+                   // LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
+                    ZoneId zoneId = ZoneId.of("UTC");//按照UTC时区来解析数据库中的时间戳，而不是JVM的默认时区。
+                    LocalDateTime createdAt = resultSet.getTimestamp("created_at").toInstant().atZone(zoneId).toLocalDateTime();
+
+                    String senderUsername = resultSet.getString("sender_username");
+                    String receiverUsername = resultSet.getString("receiver_username");
+                    String senderAvatar = resultSet.getString("sender_avatar");
+                    String receiverAvatar = resultSet.getString("receiver_avatar");
+                    String senderNickname = resultSet.getString("sender_nickname");
+                    String receiverNickname = resultSet.getString("receiver_nickname");
+
+                     // 根据查询结果创建用户和聊天消息对象
+                    User1 sender = new User1(senderId, senderUsername, senderAvatar,senderNickname); // 添加头像参数
+                    User1 receiver = new User1(receiverId, receiverUsername, receiverAvatar,senderNickname); // 添加头像参数
+                    boolean isCurrentUser = senderId == userId;
+                    System.out.println("创建时间："+createdAt);
+                    // 创建 ChatMessage1 对象，并设置相关属性
+                    ChatMessage1 chatMessage = new ChatMessage1(id, sender, content, isCurrentUser,createdAt);
+                    setChatRecordAsRead(id, userId);
+                    //setChatRecordAsRead(id, friendId);
+                    // 将聊天消息对象添加到聊天历史记录列表中
+                    chatHistory.add(chatMessage);
+                }
+            }
+        } catch (SQLException e) {
+            // 处理可能发生的异常
+            e.printStackTrace();
+        }
+
+        // 返回聊天历史记录列表
+        return chatHistory;
+    }
+
+    public void updateMessageStatus(int messageId, boolean isRead) {
+        try {
+            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            PreparedStatement statement = connection.prepareStatement("UPDATE chat_records SET read_status = ? WHERE id = ?");
+            statement.setString(1, "read");
+            statement.setInt(2, messageId);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public int insertMessage(int senderId, int receiverId, String messageContent, String contentType, String fileName) {
+        String insertMessageQuery = "INSERT INTO messages (sender_id, receiver_id, content, content_type, file_name) VALUES (?, ?, ?, ?, ?)";
 
         try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              PreparedStatement preparedStatement = connection.prepareStatement(insertMessageQuery, Statement.RETURN_GENERATED_KEYS)) {
             preparedStatement.setInt(1, senderId);
             preparedStatement.setInt(2, receiverId);
             preparedStatement.setString(3, messageContent);
+            preparedStatement.setString(4, contentType);
+            preparedStatement.setString(5, fileName);
             preparedStatement.executeUpdate();
 
             // 获取插入消息的id
@@ -261,7 +399,6 @@ public class DatabaseConnection {
                 group.setDescription(resultSet.getString("description"));
                 group.setAvatar(resultSet.getString("avatar_path"));
                 System.out.println("群众："+group);
-                // 根据你的Group类的定义，你可能需要获取更多的列
                 groups.add(group);
             }
             System.out.println("返回的："+groups);
@@ -342,10 +479,10 @@ public class DatabaseConnection {
     }
 
     // 获取请求列表
-    public List<String> getRequestList(String username) {
+    public List<Request1> getRequestList(String username) {
         int userId = getUserIdByUsername(username);
-        String select = "SELECT username FROM users WHERE id IN (SELECT sender_id FROM requests WHERE receiver_id = ? AND status = 'pending')";
-        List<String> requestList = new ArrayList<>();
+        String select = "SELECT u.username, r.status, r.request_type, r.group_id FROM users u INNER JOIN requests r ON u.id = r.sender_id WHERE r.receiver_id = ? AND r.status IN ('pending', 'accepted', 'rejected')";
+        List<Request1> requestList = new ArrayList<>();
         try (
                 Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
                 PreparedStatement statement = connection.prepareStatement(select)
@@ -353,13 +490,20 @@ public class DatabaseConnection {
             statement.setInt(1, userId);
             ResultSet resultSet = statement.executeQuery();
             while (resultSet.next()) {
-                requestList.add(resultSet.getString("username"));
+                String username1 = resultSet.getString("username");
+                String status = resultSet.getString("status");
+                String requestType = resultSet.getString("request_type");
+                Integer groupId = resultSet.getObject("group_id", Integer.class);  // 获取群组ID，如果没有则为null
+                Request1 request = new Request1(username1, status, requestType, groupId);
+                requestList.add(request);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return requestList;
     }
+
+
 
     // 更新请求状态
     public boolean updateFriendRequestStatus(String username1, String username2, String status) {
@@ -703,6 +847,38 @@ public class DatabaseConnection {
             }
         }
         return user;
+    }
+    public Group1 findGroup1(String groupName) {
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        Group1 group = null;
+        try {
+            conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            String checkSql = "SELECT * FROM  `groups` WHERE name_id = ?";
+            pstmt = conn.prepareStatement(checkSql);
+            pstmt.setString(1, groupName);
+            rs = pstmt.executeQuery();
+            if(rs.next()){
+                group = new Group1();
+                group.setName(rs.getString("name"));
+                group.setDescription(rs.getString("description"));
+                group.setAvatar(rs.getString("avatar_path"));
+                // 更多字段...
+                System.out.println("查找到的群聊信息："+group);
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        } finally {
+            try {
+                if(rs != null) rs.close();
+                if(pstmt != null) pstmt.close();
+                if(conn != null) conn.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
+        }
+        return group;
     }
 
 
@@ -1076,6 +1252,164 @@ public class DatabaseConnection {
         }
         return friends;
     }
+
+    public boolean isMemberOfGroup(String username, String name_id) throws SQLException {
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement pstmt = connection.prepareStatement(
+     "SELECT COUNT(*) FROM group_members WHERE user_id = (SELECT id FROM users WHERE username = ?) AND group_id = (SELECT id FROM `groups` WHERE name_id = ?)")) {
+            pstmt.setString(1, username);
+            pstmt.setString(2, name_id);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    System.out.println("这是啥");
+                    int count = rs.getInt(1);
+                    return  count > 0;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw e;
+        }
+        return false;
+    }
+
+    // 处理发送群请求
+    public boolean sendGroupRequest(String username, String groupName) {
+        try {
+            // 获取用户 ID 和群聊 ID
+            int userId = getUserIdByUsername(username);
+            int groupId = getGroupIdByName(groupName);
+            if (userId == -1 || groupId == -1) {
+                System.out.println("User or group not found");
+                return false;
+            }
+
+            // 查询所有的管理员和群主的 ID
+            List<Integer> adminIds = getAdminIdsByGroupId(groupId);
+            if (adminIds.isEmpty()) {
+                System.out.println("No admins or creators found for the group");
+                return false;
+            }
+
+            // 为每一个管理员和群主创建新的请求记录
+            String query = "INSERT INTO requests (sender_id, receiver_id, group_id, request_type, status) VALUES (?, ?, ?, 'group', 'pending')";
+            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            PreparedStatement statement = connection.prepareStatement(query);
+
+            for (Integer adminId : adminIds) {
+                statement.setInt(1, userId);
+                statement.setInt(2, adminId);
+                statement.setInt(3, groupId);
+                int rowsInserted = statement.executeUpdate();
+
+                // 检查是否成功插入新的请求记录
+                if (rowsInserted <= 0) {
+                    System.out.println("Failed to send group request to admin " + adminId);
+                    return false;
+                }
+            }
+
+            System.out.println("Group request sent successfully");
+            return true;
+        } catch (SQLException e) {
+            System.out.println("Error sending group request: " + e.getMessage());
+            return false;
+        }
+    }
+
+    //查找出每个群聊的管理员和群主id
+    public List<Integer> getAdminIdsByGroupId(int groupId) {
+        List<Integer> adminIds = new ArrayList<>();
+        try {
+            String query = "SELECT user_id FROM group_members WHERE group_id = ? AND role IN ('creator', 'admin')";
+            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, groupId);
+            ResultSet rs = statement.executeQuery();
+            while (rs.next()) {
+                adminIds.add(rs.getInt("user_id"));
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getting admin IDs: " + e.getMessage());
+        }
+        return adminIds;
+    }
+
+
+    public int getGroupOwnerId(int groupId) {
+        try {
+            // 查询群聊创建者 ID
+            String query = "SELECT user_id FROM group_members WHERE group_id = ? AND role = 'creator'";
+            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, groupId);
+            ResultSet resultSet = statement.executeQuery();
+
+            // 检查结果集是否非空
+            if (resultSet.next()) {
+                return resultSet.getInt("user_id");
+            } else {
+                System.out.println("Group owner not found");
+                return -1;
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getting group owner ID: " + e.getMessage());
+            return -1;
+        }
+    }
+
+
+    public int getGroupIdByName(String groupName) {
+        try {
+            // 查询群聊 ID
+            String query = "SELECT id FROM `groups` WHERE name_id = ?";
+            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1, groupName);
+            ResultSet resultSet = statement.executeQuery();
+
+            // 检查结果集是否非空
+            if (resultSet.next()) {
+                return resultSet.getInt("id");
+            } else {
+                System.out.println("Group not found");
+                return -1;
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getting group ID: " + e.getMessage());
+            return -1;
+        }
+    }
+
+
+    public boolean deleteRequest(String senderUsername, String receiverUsername, String requestType, Integer groupId) {
+        int senderId = getUserIdByUsername(senderUsername);
+        int receiverId = getUserIdByUsername(receiverUsername);
+
+        String delete = "DELETE FROM requests WHERE sender_id = ? AND receiver_id = ? AND request_type = ?";
+        if (groupId != null) {
+            delete += " AND group_id = ?";
+        }
+
+        try (
+                Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                PreparedStatement statement = connection.prepareStatement(delete)
+        ) {
+            statement.setInt(1, senderId);
+            statement.setInt(2, receiverId);
+            statement.setString(3, requestType);
+            if (groupId != null) {
+                statement.setInt(4, groupId);
+            }
+
+            int rowCount = statement.executeUpdate();
+            return rowCount > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
 
 }
 

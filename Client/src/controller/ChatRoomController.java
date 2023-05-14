@@ -3,8 +3,11 @@ package controller;
 import Util.ConnectionManager;
 import client.ChatMessage;
 import client.Group;
+import client.Request;
 import client.User;
+import java.io.File;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -31,6 +34,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Callback;
@@ -41,21 +45,17 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 
-public class ChatRoomController implements ConnectionManager.MessageListener {
+public class ChatRoomController implements Util.ConnectionManager.MessageListener {
 
     @FXML
     public Label PeopleName;
-
-    @FXML
-    private Circle RequestPrompt;
 
     @FXML
     private TextField searchField;
@@ -75,6 +75,14 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
     @FXML
     private Label GroupChat;
 
+    @FXML
+    private ImageView File;  //  发送文件图片
+    @FXML
+    private Button SendEmoticons; // 用于聊天发送表情包
+    @FXML
+    private ImageView Emoticons; // 发送表情包图片
+    @FXML
+    private Button SendFile;// 用于聊天发送文件
     @FXML
     private Label FriendChat;
 
@@ -129,9 +137,12 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
 
     @FXML
     private ToggleButton pinToggleButton;
-
+    @FXML
     private Stage primaryStage;
-
+    @FXML
+    private ImageView Home;
+    @FXML
+    public  Circle RequestPrompt;
     @FXML
     private ListView<User> friendsListView;
 
@@ -149,38 +160,64 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
         user.setMainController(this);
     }
 
-   /* @Override
-    public void onMessageReceived(ChatMessage message) {
-        Platform.runLater(() -> {
-            addMessageToChatRecord(message.getSender(), message.getContent(), true);
-        });
-    }*/
 
     private ObservableList<User> observableFriendsList = FXCollections.observableArrayList();
 
     public void sendChatMessage(ActionEvent actionEvent) {
 
     }
+    private ConnectionManager connectionManager;
     //监听
-    public interface MessageListener {
-        void onMessageReceived(ChatMessage message);
-    }
-    private MessageListener messageListener;
-    public void setMessageListener(MessageListener messageListener) {
-        this.messageListener = messageListener;
-    }
     @Override
     public void onMessageReceived(ChatMessage message) {
         Platform.runLater(() -> {
             System.out.println("信息发送者："+message.getSender()+" 信息接收者："+activeReceiver.getId());
             if (message.getSender().getId() == activeReceiver.getId()) {
-                addMessageToChatRecord(message.getSender(), message.getContent(), true);
+                addMessageToChatRecord(message.getSender(), message.getContent(), true,message.getUpdatedAt());
+            }
+        });
+    }
+
+    private void addMessageToChatRecord(User sender, String content, boolean isSentByCurrentUser,LocalDateTime dateTimeFormatter) {
+        System.out.println("实际上："+dateTimeFormatter);
+
+        ChatMessage chatMessage = new ChatMessage(sender, content, dateTimeFormatter);
+        if (isSentByCurrentUser) {
+            chatMessage.setSentByCurrentUser(true);
+        }
+        System.out.println("消息1："+chatMessage);
+        chatRecordList.add(chatMessage);
+    }
+    @Override
+    public void onChatHistoryReceived(List<ChatMessage> chatHistory) {
+        Platform.runLater(() -> {
+            // 清空当前的聊天记录
+            messagesListView.getItems().clear();
+            // 遍历聊天记录，将每条记录添加到聊天窗口中
+            for (ChatMessage message : chatHistory) {
+                boolean isSender = message.getSender().getId() == currentUser.getId();
+                System.out.println("就觉得说出口: "+message.getCreatedAt());
+                System.out.println("消息："+message);
+                System.out.println("用户："+message.getSender());
+                addMessageToChatRecord(message.getSender(), message.getContent(), isSender,message.getCreatedAt());
             }
         });
     }
     // 用于存储群聊列表的ObservableList
     private ObservableList<Group> groupList = FXCollections.observableArrayList();
     private ObservableList<ChatMessage> chatRecordList = FXCollections.observableArrayList();
+
+    public void updtaed (){
+        System.out.println("修改了成功");
+        System.out.println("按钮以为红色");
+        RequestPrompt.setFill(Color.RED);
+        RequestPrompt.setOpacity(1.0);
+    }
+    public void updatad(){
+        // 如果没有新请求，将RequestPrompt设置为原始颜色（例如，白色）并使其透明
+        RequestPrompt.setFill(Color.WHITE);
+        RequestPrompt.setOpacity(0.0);
+    }
 
     @FXML
     public void togglePin(ActionEvent event) {
@@ -197,20 +234,30 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
         @FXML
         private void initialize() {
 
+            // 在initialize方法中
+
+            ConnectionManager connectionManager = ConnectionManager.getInstance();
+            connectionManager.startMessageListening();
+            connectionManager.setMessageListener(this);
             // 将朋友列表数据设置到ListView中
+            PeopleName.setVisible(false);
             friendsListView.setItems(friendList);
             friendsListView.setVisible(false);
             groupChatsListView.setVisible(false);
             messagesListView.setVisible(false);
-            //messagesListView1.setVisible(false);
+            messagesListView1.setVisible(false);
+            sendButton.setVisible(false);
+            messageInput.setVisible(false);
+            ChatRecord1.setVisible(false);
             FriendChat.setTextFill(Color.GRAY);// 好友按钮变色
             GroupChat.setTextFill(Color.GRAY);// 群聊按钮变回去
             RequestPrompt.setFill(Color.WHITE);
             RequestPrompt.setOpacity(1.0);
             ChatRecord1.setItems(chatRecordList);
-            ConnectionManager connectionManager = ConnectionManager.getInstance();
-            connectionManager.setMessageListener(this::onMessageReceived);
-            connectionManager.startMessageListening();
+            File.setVisible(false);// 文件图片消失
+            SendFile.setVisible(false);  //发送文件按钮消失
+            Emoticons.setVisible(false); // 表情图片消失
+            SendEmoticons.setVisible(false);// 发送表情包按钮消失
 
 
 
@@ -237,7 +284,9 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
                             BackgroundFill backgroundFill = new BackgroundFill(Color.web("#CCCCCC"), new CornerRadii(5), Insets.EMPTY);
                             Background background = new Background(backgroundFill);
                             contentBox.setBackground(background);
-                            contentBox.setPadding(new Insets(5));
+                            //contentBox.setPadding(new Insets(5));
+                            contentBox.setPadding(new Insets(10)); // 10 是一个示例值，可以根据需要调整
+
 
                             // 设置自动换行
                             content.setWrapText(true);
@@ -247,15 +296,27 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
                         @Override
                         protected void updateItem(ChatMessage chatMessage, boolean empty) {
                             super.updateItem(chatMessage, empty);
-
+                            //System.out.println("时间家家户户："+chatMessage);
                             if (chatMessage != null) {
                                 imageView.setImage(new Image(chatMessage.getSender().getAvatar()));
-                                imageView.setFitHeight(30);
-                                imageView.setFitWidth(30);
-                                senderName.setText(chatMessage.getSender().getNickname());
+                                imageView.setFitHeight(50);
+                                imageView.setFitWidth(50);
+                               // senderName.setText(chatMessage.getSender().getNickname());
+                                System.out.println(chatMessage);
+                                //senderName.setStyle("-fx-font-size: 18px;"); // 18px 是一个示例值，可以根据需要调整
+                                System.out.println("发送者："+chatMessage.getSender());
                                 System.out.println("时间："+chatMessage.getUpdatedAt());
-                               // timestamp.setText(chatMessage.getUpdatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+                                System.out.println("聊天信息："+chatMessage.getContent());
+                                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                                timestamp.setText(chatMessage.getUpdatedAt().format(formatter));
+                                // 创建一个新的HBox来容纳时间戳
+                               // HBox timestampBox = new HBox();
+                               // timestampBox.setAlignment(Pos.CENTER); // 让时间戳在HBox中居中
+
+                                // 将时间戳添加到新的HBox
+                                //timestampBox.getChildren().add(timestamp);
                                 content.setText(chatMessage.getContent());
+                                content.setStyle("-fx-font-size: 16px;"); // 16px 是一个示例值，可以根据需要调整
 
                                 if (chatMessage.getSender().getId() == currentUser.getId()) {
                                     // 如果是当前用户发送的消息，则将气泡的对齐方式设置为右对齐
@@ -263,7 +324,7 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
                                     contentBox.setAlignment(Pos.CENTER_RIGHT);
                                     content.setAlignment(Pos.CENTER_RIGHT);
                                     HBox.setHgrow(spacer, Priority.ALWAYS);
-                                    header.getChildren().setAll(spacer, imageView, senderName, timestamp);
+                                    header.getChildren().setAll(spacer,timestamp, senderName, imageView );
                                 } else {
                                     // 如果是其他用户发送的消息，则将气泡的对齐方式设置为左对齐
                                     header.setAlignment(Pos.CENTER_LEFT);
@@ -310,6 +371,15 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
                             // 在这里添加发送消息的代码
                             sendMessageItem.setOnAction(event -> {
                                 User user = getItem();
+                                sendButton.setVisible(true);
+                                messageInput.setVisible(true);
+                                ChatRecord1.setVisible(true);
+                                PeopleName.setVisible(true);
+                                File.setVisible(true);// 文件图片出现
+                                SendFile.setVisible(true);  //发送文件按钮出现
+                                Emoticons.setVisible(true); // 表情图片出现
+                                SendEmoticons.setVisible(true);// 发送表情包按钮出现
+
                                 System.out.println("发送消息按钮被点击：" + user.getUsername());
                                 System.out.println("发送消息按钮被点击：" + user.getNickname());
                                 // 在右侧显示聊天界面和被选中的好友的用户名
@@ -318,15 +388,22 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
                                 System.out.println("发送消息按钮被点击：");
                                 // 设置接收者的ID
                                 receiverId = user.getId();
+                                System.out.println("receiverId:"+(int)receiverId);
 
                                 // 清除之前的聊天记录并加载当前接收者的聊天记录
                                 if (activeReceiver != user) {
                                     chatRecordList.clear();
                                     activeReceiver = user;
-                                    // 在这里添加加载当前接收者聊天记录的代码
+                                    // 在这里添加加载当前
+                                    // 设置消息监听器和当前聊天的好友 ID
+                                    System.out.println("receiverId:"+(int)receiverId);
+                                    System.out.println("receiverId:"+activeReceiver.getId());
+
+                                    // 在发送 getChatHistory 请求之前，确保已经连接到服务端
+                                    connectionManager.getOut().println("getChatHistory:" + currentUser.getId() + ":" + activeReceiver.getId());
+
                                 }
                             });
-
 
                             viewProfileItem.setOnAction(event -> {
                                 User user = getItem();
@@ -394,11 +471,11 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
 
                             if (user != null) {
                                 imageView.setImage(new Image(user.getAvatar()));
-                                imageView.setFitHeight(50);
-                                imageView.setFitWidth(50);
-                                setText(user.getNickname());
-                                setGraphic(imageView);
-
+                                imageView.setFitHeight(70);
+                                imageView.setFitWidth(70);
+                                setText(user.getNickname());//设置单元格的文本内容
+                                setGraphic(imageView);//设置单元格的图形内容。
+                                setStyle("-fx-font-size: 20px;");
                                 // 当单元格不为空时，设置ContextMenu
                                 setContextMenu(contextMenu);
                             } else {
@@ -412,6 +489,20 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
                     };
                 }
             });
+            AtomicReference<File> chosenFileRef = new AtomicReference<>();
+            SendFile.setOnAction(event -> {
+                // 创建一个文件选择器
+                FileChooser fileChooser = new FileChooser();
+                fileChooser.setTitle("选择文件");
+                // 显示文件选择对话框并获取选择的文件
+                File chosenFile = fileChooser.showOpenDialog(messageInput.getScene().getWindow());
+                if (chosenFile != null) {
+                    // 将选择的文件的路径显示在消息输入框中
+                    messageInput.setText(chosenFile.getAbsolutePath());
+                    // 保存chosenFile到AtomicReference
+                    chosenFileRef.set(chosenFile);
+                }
+            });
             sendButton.setOnAction(event -> {
                 if (receiverId == 0) {
                     // 如果没有选择聊天对象，不发送消息
@@ -419,21 +510,44 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
                 }
                 String messageText = messageInput.getText().trim();
                 if (!messageText.isEmpty()) {
-                    // 使用长连接发送请求到服务器
-                    // 获取当前时间并格式化为字符串
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                     LocalDateTime currentTime = LocalDateTime.now();
                     String currentTimeStr = currentTime.format(formatter);
-                    System.out.println(currentTime);
-                    // 添加当前时间到发送的请求字符串中
-                    String request = "sendMessageLongConnection:" + currentUser.getId() + ":" + receiverId + ":" + messageText + "," + currentTimeStr;
-                    connectionManager.getOut().println(request);
+                    System.out.println("时间是："+currentTime);
+                    JsonObject messageObject = new JsonObject();
+                    messageObject.addProperty("senderId", currentUser.getId());
+                    messageObject.addProperty("receiverId", receiverId);
+                    messageObject.addProperty("timestamp", currentTimeStr);
 
-                    // 将消息添加到聊天记录列表中
-                    addMessageToChatRecord(currentUser, messageText, true);
+                    // 从AtomicReference获取chosenFile
+                    File chosenFile = chosenFileRef.get();
+
+                    // 如果选择了文件，则将文件转换为Base64编码的字符串
+                    if (chosenFile != null) {
+                        try {
+                            byte[] fileContent = Files.readAllBytes(chosenFile.toPath());
+                            String encodedString = Base64.getEncoder().encodeToString(fileContent);
+                            messageObject.addProperty("content", encodedString);
+                            messageObject.addProperty("content_type", "file");
+                            messageObject.addProperty("file_name", chosenFile.getName());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            return;
+                        }
+                    } else {
+                        messageObject.addProperty("content", messageText);
+                        messageObject.addProperty("content_type", "text");
+                    }
+
+                    String messageString = messageObject.toString();
+                    connectionManager.getOut().println("sendMessageLongConnection:" + messageString);
+                    addMessageToChatRecord(currentUser, messageText, true, currentTime);
                     messageInput.clear();
+                    // 清空AtomicReference
+                    chosenFileRef.set(null);
                 }
             });
+
 
             // 在initialize方法中，将群聊列表数据设置到ListView中
             groupChatsListView.setItems(groupList);
@@ -453,6 +567,7 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
                                 imageView.setFitHeight(50);
                                 imageView.setFitWidth(50);
                                 setText(group.getName());
+                                setStyle("-fx-font-size: 20px;");
                                 setGraphic(imageView);
 
                                 // Create the context menu with four menu items
@@ -461,8 +576,9 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
                                 MenuItem quitGroupItem = new MenuItem("退出群");
                                 MenuItem disbandGroupItem = new MenuItem("解散群");
                                 MenuItem manageGroupItem = new MenuItem("管理群");
+                                MenuItem viewGroupItem = new MenuItem("查看群");
 
-                                contextMenu.getItems().addAll(sendMessageItem, quitGroupItem, disbandGroupItem, manageGroupItem);
+                                contextMenu.getItems().addAll(sendMessageItem, quitGroupItem, disbandGroupItem, manageGroupItem,viewGroupItem);
 
                                 sendMessageItem.setOnAction(event -> {
                                     // Handle sending message
@@ -484,6 +600,10 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
                                     System.out.println("管理群按钮被点击");
                                 });
 
+                                viewGroupItem.setOnAction(event -> {
+                                    System.out.println("查看群聊消息被点击");
+                                });
+
                                 // Set the context menu to the cell
                                 setContextMenu(contextMenu);
                             } else {
@@ -498,20 +618,13 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
         }
 
 
-    private void addMessageToChatRecord(User sender, String content, boolean isSentByCurrentUser) {
-        ChatMessage chatMessage = new ChatMessage(sender, content);
-        if (isSentByCurrentUser) {
-            chatMessage.setSentByCurrentUser(true);
-        }
-        chatRecordList.add(chatMessage);
-    }
 
 
     @FXML
     void searchField1(ActionEvent event) {
 
     }
-    public void receiveMessage(int senderId, String messageContent) {
+  /*  public void receiveMessage(int senderId, String messageContent) {
         System.out.println("查找到的Id:"+senderId);
         // 根据senderId从好友列表中查找User对象
         User sender = findUserById(senderId);
@@ -519,11 +632,11 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
         if (sender != null) {
             // 如果找到了发送者，将消息添加到聊天记录中，并刷新聊天界面
             System.out.println("发送者："+sender+"发送的消息:"+messageContent);
-            addMessageToChatRecord(sender, messageContent, false);
+            addMessageToChatRecord(sender, messageContent, false,);
         } else {
             System.out.println("无法找到发送者：" + senderId);
         }
-    }
+    }*/
 
     private User findUserById(long userId) {
         for (User user : observableFriendsList) {
@@ -536,6 +649,15 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
 
     @FXML
    void FriendsTab(ActionEvent event) {
+        PeopleName.setVisible(false);
+        sendButton.setVisible(false);
+        messageInput.setVisible(false);
+        ChatRecord1.setVisible(false);
+        File.setVisible(false);// 文件图片消失
+        SendFile.setVisible(false);  //发送文件按钮消失
+        Emoticons.setVisible(false); // 表情图片消失
+        SendEmoticons.setVisible(false);// 发送表情包按钮消失
+
         FriendChat.setTextFill(Color.BLACK);// 好友按钮变色
         GroupChat.setTextFill(Color.GRAY);// 群聊按钮变回去
         // 设置好友列表控件为可见
@@ -596,13 +718,22 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
 
     @FXML
     public void GroupsTab(ActionEvent actionEvent) {
+        PeopleName.setVisible(false);
         System.out.println("查看群聊列表被点击");
+        sendButton.setVisible(false);
+        messageInput.setVisible(false);
+        ChatRecord1.setVisible(false);
         groupChatsListView.setVisible(true);
         friendsListView.setVisible(false);
         messagesListView.setVisible(false);
         messagesListView1.setVisible(false);
         FriendChat.setTextFill(Color.GRAY);// 好友按钮变色
         GroupChat.setTextFill(Color.BLACK);// 群聊按钮变回去
+        File.setVisible(false);// 文件图片消失
+        SendFile.setVisible(false);  //发送文件按钮消失
+        Emoticons.setVisible(false); // 表情图片消失
+        SendEmoticons.setVisible(false);// 发送表情包按钮消失
+
 
         // 创建一个Socket连接到本地的6000端口
         try (Socket socket = new Socket("127.0.0.1", 6000);
@@ -655,8 +786,17 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
 
     @FXML
     void friendsButton1(ActionEvent event) {
+        PeopleName.setVisible(false);
+        sendButton.setVisible(false);
+        messageInput.setVisible(false);
+        ChatRecord1.setVisible(false);
         FriendChat.setTextFill(Color.GRAY);// 好友按钮变色
         GroupChat.setTextFill(Color.GRAY);// 群聊按钮变回去
+        File.setVisible(false);// 文件图片消失
+        SendFile.setVisible(false);  //发送文件按钮消失
+        Emoticons.setVisible(false); // 表情图片消失
+        SendEmoticons.setVisible(false);// 发送表情包按钮消失
+
         // 获取当前场景
         Scene scene2 = ((Node) event.getSource()).getScene();
         ImageView imageView2 = (ImageView) scene2.lookup("#Requestpicture");
@@ -748,7 +888,13 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
 
     @FXML
     void message1(ActionEvent event) {
+        PeopleName.setVisible(false);
         friendsAndGroupChatsButtonsBox.setVisible(false);
+        File.setVisible(false);// 文件图片消失
+        SendFile.setVisible(false);  //发送文件按钮消失
+        Emoticons.setVisible(false); // 表情图片消失
+        SendEmoticons.setVisible(false);// 发送表情包按钮消失
+
         // 获取当前场景
         Scene scene2 = ((Node) event.getSource()).getScene();
         ImageView imageView2 = (ImageView) scene2.lookup("#Requestpicture");
@@ -768,10 +914,10 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
         }
         System.out.println("消息按钮被点击");
         // 设置消息列表可见
-        messagesListView.setVisible(true);
+        messagesListView1.setVisible(true);
         friendsListView.setVisible(false);
         groupChatsListView.setVisible(false);
-        messagesListView1.setVisible(false);
+        messagesListView.setVisible(false);
         // 获取当前场景
         Scene scene = ((Node) event.getSource()).getScene();
 
@@ -834,14 +980,20 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))){
             //发送退出请求
             out.println("logout:"+currentUser.getUsername());
-            ConnectionManager connectionManager = ConnectionManager.getInstance();
+            System.out.println("发送退出登入请求："+currentUser.getUsername());
+            /*ConnectionManager connectionManager = ConnectionManager.getInstance();
             connectionManager.stopMessageListening();
+            connectionManager.shutdown(); // 添加这行*/
+            stopPeriodicTask();
             // 关闭 JavaFX 应用程序
             Platform.exit();
         }
-        System.out.println("用户："+currentUser.getUsername()+" 退出登录");
-        Stage stage = (Stage) exitButton.getScene().getWindow();
-        stage.close();
+        // 在 JavaFX 应用程序线程中执行关闭操作
+        Platform.runLater(() -> {
+            Stage stage = (Stage) exitButton.getScene().getWindow();
+            stage.close();
+            Platform.exit();
+        });
     }
 
     public void setUserAvatar(Image avatar) {
@@ -855,7 +1007,16 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
 
     @FXML
     void RequestisLt1(ActionEvent event) throws IOException {
+        PeopleName.setVisible(false);
+        messagesListView1.setVisible(false);
+        ChatRecord1.setVisible(false);
         friendsAndGroupChatsButtonsBox.setVisible(false);
+        messageInput.setVisible(false);
+        File.setVisible(false);// 文件图片消失
+        SendFile.setVisible(false);  //发送文件按钮消失
+        Emoticons.setVisible(false); // 表情图片消失
+        SendEmoticons.setVisible(false);// 发送表情包按钮消失
+
         Scene scene2 = ((Node) event.getSource()).getScene();
 
         ImageView imageView = (ImageView) scene2.lookup("#Requestpicture");
@@ -924,36 +1085,35 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
 
             // 使用Gson库将服务器的响应从JSON格式转换为Java对象
             Gson gson = new Gson();
-            List<String> requestList = gson.fromJson(response, new TypeToken<List<String>>() {}.getType());
+            List<Request> requestList = gson.fromJson(response, new TypeToken<List<Request>>() {}.getType());
 
             // 清空ListView中的所有元素
             messagesListView.getItems().clear();
 
             // 在ListView中显示请求
             ObservableList<HBox> items = FXCollections.observableArrayList();
-            for(String requester : requestList) {
-                final HBox requestBox = new HBox();  // 注意这里我们把requestBox声明为final
+            for(Request request1 : requestList) {
+                final HBox requestBox = new HBox();
                 requestBox.setSpacing(10);
-                Label requesterLabel = new Label(requester);//用户名
-                User user1 =null;
+                Label requesterLabel = new Label(request1.getUsername());
+                requesterLabel.setStyle("-fx-font-size: 16px");
+                User user1 = null;
                 Socket socket1 = new Socket("127.0.0.1", 6000);
                 PrintWriter out1 = new PrintWriter(socket1.getOutputStream(), true);
                 BufferedReader in1 = new BufferedReader(new InputStreamReader(socket1.getInputStream()));
                 try {
                     User user = null;
-                    // 创建一个连接到服务器的Socket，"127.0.0.1"是服务器地址，6000是端口
-                    System.out.println("这个是账号吗："+requester);
-                    out1.println("getUserInfo:" + requester);
-                    // 从服务器读取响应
+                    System.out.println("这个是账号吗："+request1.getUsername());
+                    out1.println("getUserInfo:" + request1.getUsername());
                     String response1 = in1.readLine();
-                    System.out.println("服务器响应：" + response1);
+                    //System.out.println("服务器响应：" + response1);
                     Gson gson1 = new Gson();
                     user = gson1.fromJson(response1, User.class);
                     user1 = user;
-                    System.out.println("序列化后: " + user1);
-                }catch (Exception e){
+                   /// System.out.println("序列化后: " + user1);
+                } catch (Exception e){
                     e.printStackTrace();
-                }finally {
+                } finally {
                     try {
                         if(out1 != null) out1.close();
                         if(in1 != null) in1.close();
@@ -963,28 +1123,96 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
                     }
                 }
                 ImageView requesterAvatar = new ImageView(new Image(user1.getAvatar()));
-                requesterAvatar.setFitWidth(50);
-                requesterAvatar.setFitHeight(50);
+                requesterAvatar.setFitWidth(100);
+                requesterAvatar.setFitHeight(100);
                 requesterAvatar.setPreserveRatio(false);
-                Button acceptButton = new Button("接受");
+                Label requesterNickname = new Label(user1.getNickname());
+                requesterNickname.setStyle("-fx-font-size: 16px");
+                Button acceptButton = new Button("同意");
+                //acceptButton.getStyleClass().add("accepted-button");//??????
+                acceptButton.setStyle("-fx-background-color: purple; -fx-text-fill: white; -fx-font-size:12px;");
                 Button rejectButton = new Button("拒绝");
+                rejectButton.setStyle("-fx-background-color: purple; -fx-text-fill: white; -fx-font-size:12px;");
+                Label statusLabel = new Label();
+                Label requestTypeLabel = new Label("请求类型: " + (request1.getRequestType().equals("friend") ? "好友请求" : "群聊请求"));
+                requestTypeLabel.setStyle("-fx-font-size: 16px");
+
+                switch (request1.getStatus()) {
+                    case "pending":
+                        statusLabel.setText("待处理");
+                        statusLabel.setStyle("-fx-font-size: 16px");
+                        break;
+                    case "accepted":
+                        statusLabel.setText("已同意");
+                        statusLabel.setStyle("-fx-font-size: 16px");
+                        acceptButton.setVisible(false);
+                        rejectButton.setVisible(false);
+                        break;
+                    case "rejected":
+                        statusLabel.setText("已拒绝");
+                        statusLabel.setStyle("-fx-font-size: 16px");
+                        acceptButton.setVisible(false);
+                        rejectButton.setVisible(false);
+                        break;
+                }
+                User finalUser = user1;
                 acceptButton.setOnAction(new EventHandler<ActionEvent>() {
                     @Override
                     public void handle(ActionEvent event) {
-                        acceptRequest(requester);
+                        if(request1.getRequestType().equals("friend")) {
+                            acceptRequest(request1.getUsername());
+                        }else if(request1.getRequestType().equals("group")){
+                            acceptRequest(finalUser.getId(),request1.getGroupId());
+                        }
+                        //acceptRequest(request1.getUsername());
                         items.remove(requestBox);  // 删除这个HBox
                     }
                 });
+
 
                 rejectButton.setOnAction(new EventHandler<ActionEvent>() {
                     @Override
                     public void handle(ActionEvent event) {
-                        rejectRequest(requester);
+                        if(request1.getRequestType().equals("friend")) {
+                            rejectRequest(request1.getUsername());
+                        }else if(request1.getRequestType().equals("group")){
+                            rejectRequest(finalUser.getId(),request1.getGroupId());
+                        }
+                        // rejectRequest(request1.getUsername());
                         items.remove(requestBox);  // 删除这个HBox
                     }
                 });
+                Button deleteButton = new Button("删除");
+                deleteButton.getStyleClass().add("delete-button");  // 设置样式类
+                deleteButton.setStyle("-fx-background-color: red; -fx-text-fill: white; -fx-font-size: 14px;");  // 设置样式
+                // Add the deleteButton to the userBox
+                deleteButton.setOnAction(new EventHandler<ActionEvent>() {
+                    @Override
+                    public void handle(ActionEvent event) {
+                        deleteRequest(request1.getUsername(), request1.getRequestType(), request1.getGroupId());
 
-                requestBox.getChildren().addAll(requesterAvatar, requesterLabel, acceptButton, rejectButton);
+                        items.remove(requestBox);  // 删除这个HBox
+                    }
+                });
+                // 将接受和拒绝按钮放到一个HBox中
+                HBox acceptRejectBox = new HBox();
+                acceptRejectBox.setAlignment(Pos.CENTER_RIGHT);
+                acceptRejectBox.getChildren().addAll(acceptButton, rejectButton);
+
+                // 将删除按钮放到另一个HBox中
+                HBox deleteButtonBox = new HBox();
+                deleteButtonBox.setAlignment(Pos.CENTER_RIGHT);
+                deleteButtonBox.getChildren().add(deleteButton);
+
+                // 将接受和拒绝按钮的HBox以及删除按钮的HBox放到一个VBox中
+                VBox buttonBox = new VBox();
+                buttonBox.setAlignment(Pos.CENTER_RIGHT);
+                buttonBox.getChildren().addAll(acceptRejectBox, deleteButtonBox);
+
+                // 将包含接受、拒绝和删除按钮的buttonBox添加到userBox中
+                VBox userBox = new VBox(requesterAvatar, requesterLabel, requesterNickname, requestTypeLabel, statusLabel, buttonBox);
+
+                requestBox.getChildren().addAll(requesterAvatar, userBox);
                 items.add(requestBox);
             }
 
@@ -998,6 +1226,31 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
             socket.close();
         } catch (IOException e) {
             // 如果在处理过程中出现任何I/O错误，打印错误堆栈信息
+            e.printStackTrace();
+        }
+    }
+
+    //删除请求
+    private void deleteRequest(String username, String requestType, Integer groupId) {
+        String request = "deleteRequest:" + username+ ":" + currentUser.getUsername()  + ":" + requestType;
+        if (groupId != null) {
+            request += ":" + groupId;
+        }
+
+        try {
+            Socket socket = new Socket("127.0.0.1", 6000);
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+            out.println(request);
+
+            String response = in.readLine();
+            System.out.println("服务器响应：" + response);
+
+            out.close();
+            in.close();
+            socket.close();
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -1031,6 +1284,7 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
         Map<String, String> requestMap = new HashMap<>();
         requestMap.put("username1", currentUser.getUsername());
         requestMap.put("username2", requester);
+        System.out.println(requestMap.get("username1")+"   "+requestMap.get("username2"));
         Gson gson = new Gson();
         String requestJson = gson.toJson(requestMap);
         String request = "rejectFriendRequest:" + requestJson;
@@ -1046,40 +1300,77 @@ public class ChatRoomController implements ConnectionManager.MessageListener {
             e.printStackTrace();
         }
     }
+    // 处理接受群组请求
+    void acceptRequest(long id, int groupId) {
+        // 向服务器发送接受请求
+        Map<Object, Object> requestMap = new HashMap<>();
+        requestMap.put("userId", id);
+        requestMap.put("groupId", groupId);
+        Gson gson = new Gson();
+        String requestJson = gson.toJson(requestMap);
+        String request = "acceptGroupRequest:" + requestJson;
+        try {
+            Socket socket = new Socket("127.0.0.1", 6000);
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            out.println(request);
+            System.out.println("接受群组请求：" + request);
+            // 关闭连接
+            out.close();
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // 处理拒绝群组请求
+    void rejectRequest(long id, int groupId) {
+        // 向服务器发送拒绝请求
+        Map<Object, Object> requestMap = new HashMap<>();
+        requestMap.put("userId", id);
+        requestMap.put("groupId", groupId);
+        Gson gson = new Gson();
+        String requestJson = gson.toJson(requestMap);
+        String request = "rejectGroupRequest:" + requestJson;
+        try {
+            Socket socket = new Socket("127.0.0.1", 6000);
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            out.println(request);
+            System.out.println("拒绝群组请求：" + request);
+            // 关闭连接
+            out.close();
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 
-    private ConnectionManager connectionManager;
+    private static ChatRoomController instance;
+    private Timeline timeline;
 
-   public void startPeriodicTask() {
-        Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
+    public ChatRoomController() {
+        instance = this;
+    }
+
+   public static ChatRoomController getInstance() {
+        return instance;
+    }
+
+    public void startPeriodicTask() {
+         timeline = new Timeline(new KeyFrame(Duration.seconds(5), event -> {
             // 获取当前登录用户的用户名
             String currentUsername = currentUser.getUsername();
             connectionManager.getOut().println("checkRequest:" + currentUsername);
-            new Thread(() -> {
-                try {
-                    String response = connectionManager.getIn().readLine();
-
-                    System.out.println("长连接响应1：" + response);
-                    if ("newRequest".equals(response)) {
-                        System.out.println("修改了成功");
-                        Platform.runLater(() -> {
-                            System.out.println("按钮以为红色");
-                            RequestPrompt.setFill(Color.RED);
-                            RequestPrompt.setOpacity(1.0);
-                        });
-                    } else {
-                        // 如果没有新请求，将RequestPrompt设置为原始颜色（例如，白色）并使其透明
-                        RequestPrompt.setFill(Color.WHITE);
-                        RequestPrompt.setOpacity(0.0);
-                    }
-
-                } catch (IOException e) {
-                    //e.printStackTrace();
-                }
-            }).start();
         }));
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
+        System.out.println("一样的吗："+timeline);
+    }
+    public void stopPeriodicTask() {
+        if (timeline != null) {
+            System.out.println("一样的吗1："+timeline);
+            timeline.stop();
+        }
     }
 
     public User getUserById(String id) throws IOException {

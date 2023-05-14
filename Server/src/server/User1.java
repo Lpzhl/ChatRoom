@@ -33,8 +33,14 @@ public class User1 {
         this.updatedAt = updatedAt;
     }
 
-    public User1(int userId, String username) {
-        this.id = userId;
+    public User1(int id, String username, String avatar,String nickname) {
+        this.id = id;
+        this.username = username;
+        this.avatar = avatar;
+        this.nickname = nickname;
+    }
+    public  User1(int id, String username){
+        this.id = id;
         this.username = username;
     }
 

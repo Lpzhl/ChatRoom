@@ -6,7 +6,7 @@
 <?import javafx.scene.text.*?>
 <?import java.lang.*?>
 
-<AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.SearchController">
+<AnchorPane prefHeight="544.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.SearchController">
     <children>
         <Label layoutX="200.0" layoutY="22.0" prefHeight="59.0" prefWidth="189.0" text="添加好友/群">
             <font>
@@ -20,7 +20,7 @@
                <ImageView fx:id="resultImage" fitHeight="155.0" fitWidth="202.0" />
            </children>
         </HBox>
-      <Label fx:id="resultUsername" layoutX="279.0" layoutY="181.0" prefHeight="68.0" prefWidth="162.0">
+      <Label fx:id="resultUsername" layoutX="271.0" layoutY="181.0" prefHeight="68.0" prefWidth="309.0">
          <font>
             <Font size="37.0" />
          </font></Label>
@@ -28,5 +28,15 @@
          <font>
             <Font size="28.0" />
          </font></Button>
+      <Label fx:id="GroupIntr" layoutX="31.0" layoutY="343.0" prefHeight="59.0" prefWidth="89.0" text="群描述" visible="false">
+         <font>
+            <Font size="28.0" />
+         </font>
+      </Label>
+      <Label fx:id="GroupIntroduction" layoutX="145.0" layoutY="358.0" prefHeight="179.0" prefWidth="353.0">
+         <font>
+            <Font size="28.0" />
+         </font>
+      </Label>
     </children>
 </AnchorPane>
