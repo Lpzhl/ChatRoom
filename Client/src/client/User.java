@@ -5,6 +5,7 @@ import controller.ChatRoomController;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 
@@ -23,6 +24,8 @@ public class User {
     private LocalDate updatedAt;
     private String password;
     private List<User> friends;
+    private String role;
+    private LocalDateTime joinTime;
 
     public User(String username1, String username) {
         this.username1 = username1;
@@ -198,7 +201,21 @@ public class User {
     public void setUpdatedAt( LocalDate updatedAt) {
         this.updatedAt = updatedAt;
     }
+    public String getRole() {
+        return role;
+    }
 
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public LocalDateTime getJoinTime() {
+        return joinTime;
+    }
+
+    public void setJoinTime(LocalDateTime joinTime) {
+        this.joinTime = joinTime;
+    }
     @Override
     public String toString() {
         return "User{" +

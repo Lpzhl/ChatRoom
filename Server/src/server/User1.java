@@ -1,6 +1,7 @@
 package server;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public class User1 {
     private int id;
@@ -15,6 +16,9 @@ public class User1 {
     private String status;
     private LocalDate createdAt;
     private LocalDate updatedAt;
+
+    private String role;
+    private LocalDateTime joinTime;
 
     public User1() {
     }
@@ -150,13 +154,28 @@ public class User1 {
         this.updatedAt = updatedAt;
     }
 
+    public String getRole() {
+        return role;
+    }
 
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public LocalDateTime getJoinTime() {
+        return joinTime;
+    }
+
+    public void setJoinTime(LocalDateTime joinTime) {
+        this.joinTime = joinTime;
+    }
 
 
     // toString()方法，用于方便地显示User对象的信息
+
     @Override
     public String toString() {
-        return "User{" +
+        return "User1{" +
                 "id=" + id +
                 ", username='" + username + '\'' +
                 ", password='" + password + '\'' +
@@ -167,6 +186,10 @@ public class User1 {
                 ", birthday=" + birthday +
                 ", signature='" + signature + '\'' +
                 ", status='" + status + '\'' +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                ", role='" + role + '\'' +
+                ", joinTime=" + joinTime +
                 '}';
     }
 }

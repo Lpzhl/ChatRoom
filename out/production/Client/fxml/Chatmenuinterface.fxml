@@ -48,25 +48,25 @@
                                   </graphic>
                               </ToggleButton>
                               <ToggleButton fx:id="friendsButton" onAction="#friendsButton1" prefHeight="95.0" prefWidth="118.0" style="-fx-background-color: transparent;">
-                                  <graphic>
+                           <graphic>
                                       <ImageView fx:id="Goodfriend" fitHeight="86.0" fitWidth="80.0">
                                           <image>
                                               <Image url="@../image/好友.png" />
                                           </image>
                                       </ImageView>
-                                  </graphic>
+                           </graphic>
                               </ToggleButton>
                               <ToggleButton fx:id="RequestisLt" mnemonicParsing="false" onAction="#RequestisLt1" prefHeight="137.0" prefWidth="114.0" style="-fx-background-color: transparent;">
                                   <font>
                                       <Font size="25.0" />
                                   </font>
-                                  <graphic>
+                           <graphic>
                                       <ImageView fx:id="Requestpicture" fitHeight="96.0" fitWidth="85.0" pickOnBounds="true" preserveRatio="true">
                                           <image>
                                               <Image url="@../image/服务请求.png" />
                                           </image>
                                       </ImageView>
-                                  </graphic>
+                           </graphic>
                               </ToggleButton>
                                 <Circle fx:id="RequestPrompt" fill="white" opacity="0.0" radius="12.0" />
                         <Circle fx:id="Message2" fill="white" layoutX="81.0" layoutY="535.0" opacity="1.0" radius="12.0" />
@@ -151,7 +151,7 @@
                   </ImageView>
                        <ListView fx:id="ChatRecord1" layoutY="94.0" prefHeight="492.0" prefWidth="594.0" AnchorPane.bottomAnchor="215.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="2.0" AnchorPane.topAnchor="94.0" />
                        <TextArea fx:id="messageInput" layoutX="1.0" layoutY="593.0" prefHeight="171.0" prefWidth="595.0" wrapText="true" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="1.0" AnchorPane.rightAnchor="0.0" />
-                       <Button fx:id="sendButton" layoutX="482.0" layoutY="611.0" onAction="#sendChatMessage" opacity="0.74" prefHeight="40.0" prefWidth="123.0" text="发送" wrapText="true" AnchorPane.bottomAnchor="21.0" AnchorPane.rightAnchor="15.0" />
+                       <Button fx:id="sendButton" layoutX="482.0" layoutY="611.0" onAction="#sendChatMessage" opacity="0.74" prefHeight="40.0" prefWidth="169.0" text="发送(点击/回车）" wrapText="true" AnchorPane.bottomAnchor="21.0" AnchorPane.rightAnchor="20.0" />
                        <Label fx:id="PeopleName" layoutX="230.0" layoutY="35.0" prefHeight="42.0" prefWidth="271.0" text="用户名">
                            <font>
                                <Font size="21.0" />
@@ -169,6 +169,12 @@
                      </image>
                   </ImageView>
                   <Button fx:id="SendFile" layoutX="86.0" layoutY="584.0" mnemonicParsing="false" opacity="0.0" prefHeight="49.0" prefWidth="35.0" />
+                  <ImageView fx:id="common" fitHeight="45.0" fitWidth="42.0" layoutX="140.0" layoutY="589.0" pickOnBounds="true" preserveRatio="true">
+                     <image>
+                        <Image url="@../image/常用语.png" />
+                     </image>
+                  </ImageView>
+                  <Button fx:id="SendCommon" layoutX="139.0" layoutY="586.0" mnemonicParsing="false" onAction="#chooseCommonPhrase" opacity="0.0" prefHeight="49.0" prefWidth="40.0" />
                    </children>
                </AnchorPane>
            </children>

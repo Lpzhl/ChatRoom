@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class DatabaseConnection {
@@ -26,6 +27,181 @@ public class DatabaseConnection {
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
+    }
+
+
+    public boolean removeGroupCreator(int groupId) {
+        String query = "DELETE FROM group_members WHERE group_id = ? AND role = 'creator'";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, groupId);
+
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            return rowsAffected > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+    public boolean updateGroupMemberRoleToMember(int groupId) {
+        String query = "UPDATE group_members SET role = 'member' WHERE group_id = ? AND role = 'creator'";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, groupId);
+
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            return rowsAffected > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    public boolean updateGroupMemberRoleToCreator(int groupId, int userId) {
+        String query = "UPDATE group_members SET role = 'creator' WHERE group_id = ? AND user_id = ?";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, groupId);
+            preparedStatement.setInt(2, userId);
+
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            return rowsAffected > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+    public boolean handleQuitGroup(int userId, int groupId) {
+        String query = "DELETE FROM group_members WHERE user_id = ? AND group_id = ?";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, userId);
+            preparedStatement.setInt(2, groupId);
+
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            return rowsAffected > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    public Group1 getGroupInfo(int groupId) {
+        String query = "SELECT * FROM `groups` WHERE id = ?";
+        Group1 group = new Group1();
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, groupId);
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            // 如果resultSet有数据，填充群组信息
+            if (resultSet.next()) {
+                group.setId(resultSet.getInt("id"));
+                group.setName(resultSet.getString("name"));
+                group.setName_id(resultSet.getString("name_id"));
+                group.setDescription(resultSet.getString("description"));
+                group.setCreatedBy(resultSet.getInt("created_by"));
+                ZoneId zoneId = ZoneId.of("UTC");
+                group.setCreatedAt(Timestamp.valueOf(resultSet.getTimestamp("created_at").toInstant().atZone(zoneId).toLocalDateTime()));
+                group.setAvatar(resultSet.getString("avatar_path"));
+
+                // 获取群组成员信息
+                group.setMembers(getGroupMembers(groupId));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return group;
+    }
+
+
+    // userid有问题
+  /*  public List<User1> getGroupMembers(int groupId) {
+        String query = "SELECT * FROM group_members JOIN users ON group_members.user_id = users.id WHERE group_id = ?";
+        List<User1> members = new ArrayList<>();
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, groupId);
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            // 如果resultSet有数据，添加到成员列表
+            while (resultSet.next()) {
+                User1 user = new User1();
+                user.setId(resultSet.getInt("id"));
+                user.setUsername(resultSet.getString("username"));
+                user.setEmail(resultSet.getString("email"));
+                user.setAvatar(resultSet.getString("avatar"));
+                user.setNickname(resultSet.getString("nickname"));
+                user.setGender(resultSet.getString("gender"));
+                user.setBirthday(resultSet.getDate("birthday").toLocalDate());
+                user.setSignature(resultSet.getString("signature"));
+                user.setStatus(resultSet.getString("status"));
+                user.setRole(resultSet.getString("role"));
+                user.setJoinTime(resultSet.getTimestamp("join_time").toLocalDateTime());
+
+                members.add(user);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return members;
+    }*/
+
+    public List<User1> getGroupMembers(int groupId) {
+        String query = "SELECT users.id as user_id, group_members.*, users.* FROM group_members JOIN users ON group_members.user_id = users.id WHERE group_id = ?";
+        List<User1> members = new ArrayList<>();
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setInt(1, groupId);
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            // 如果resultSet有数据，添加到成员列表
+            while (resultSet.next()) {
+                User1 user = new User1();
+                user.setId(resultSet.getInt("user_id"));
+                user.setUsername(resultSet.getString("username"));
+                user.setEmail(resultSet.getString("email"));
+                user.setAvatar(resultSet.getString("avatar"));
+                user.setNickname(resultSet.getString("nickname"));
+                user.setGender(resultSet.getString("gender"));
+                user.setBirthday(resultSet.getDate("birthday").toLocalDate());
+                user.setSignature(resultSet.getString("signature"));
+                user.setStatus(resultSet.getString("status"));
+                user.setRole(resultSet.getString("role"));
+                ZoneId zoneId = ZoneId.of("UTC");
+                user.setJoinTime(resultSet.getTimestamp("join_time").toInstant().atZone(zoneId).toLocalDateTime());
+
+                members.add(user);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return members;
     }
 
 
@@ -93,14 +269,12 @@ public class DatabaseConnection {
         // 创建一个列表，用于存储聊天历史记录
         List<ChatMessage1> chatHistory = new ArrayList<>();
 
-        String sql = "SELECT m.id, m.sender_id, m.receiver_id, m.content, m.created_at, u1.username AS sender_username, u2.username AS receiver_username, u1.avatar AS sender_avatar, u2.avatar AS receiver_avatar, u1.nickname AS sender_nickname, u2.nickname AS receiver_nickname " +
+        String sql = "SELECT m.id, m.sender_id, m.receiver_id, m.group_id, m.content, m.content_type, m.file_name, m.created_at, u1.username AS sender_username, u2.username AS receiver_username, u1.avatar AS sender_avatar, u2.avatar AS receiver_avatar, u1.nickname AS sender_nickname, u2.nickname AS receiver_nickname " +
                 "FROM messages m " +
                 "JOIN users u1 ON m.sender_id = u1.id " +
                 "JOIN users u2 ON m.receiver_id = u2.id " +
                 "WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) " +
                 "ORDER BY m.created_at";
-
-
 
         // 创建数据库连接
         try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
@@ -119,9 +293,11 @@ public class DatabaseConnection {
                     int id = resultSet.getInt("id");
                     int senderId = resultSet.getInt("sender_id");
                     int receiverId = resultSet.getInt("receiver_id");
+                    int groupId = resultSet.getInt("group_id");
                     String content = resultSet.getString("content");
-                   // LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-                    ZoneId zoneId = ZoneId.of("UTC");//按照UTC时区来解析数据库中的时间戳，而不是JVM的默认时区。
+                    String contentType = resultSet.getString("content_type");
+                    String filename = resultSet.getString("file_name");
+                    ZoneId zoneId = ZoneId.of("UTC");
                     LocalDateTime createdAt = resultSet.getTimestamp("created_at").toInstant().atZone(zoneId).toLocalDateTime();
 
                     String senderUsername = resultSet.getString("sender_username");
@@ -131,15 +307,17 @@ public class DatabaseConnection {
                     String senderNickname = resultSet.getString("sender_nickname");
                     String receiverNickname = resultSet.getString("receiver_nickname");
 
-                     // 根据查询结果创建用户和聊天消息对象
-                    User1 sender = new User1(senderId, senderUsername, senderAvatar,senderNickname); // 添加头像参数
-                    User1 receiver = new User1(receiverId, receiverUsername, receiverAvatar,senderNickname); // 添加头像参数
+                    // 根据查询结果创建用户和聊天消息对象
+                    User1 sender = new User1(senderId, senderUsername, senderAvatar, senderNickname);
+                    User1 receiver = new User1(receiverId, receiverUsername, receiverAvatar, receiverNickname);
                     boolean isCurrentUser = senderId == userId;
-                    System.out.println("创建时间："+createdAt);
+
                     // 创建 ChatMessage1 对象，并设置相关属性
-                    ChatMessage1 chatMessage = new ChatMessage1(id, sender, content, isCurrentUser,createdAt);
+                    ChatMessage1 chatMessage = new ChatMessage1(id, sender, content, isCurrentUser, createdAt, filename);
+                    chatMessage.setGroupId(groupId);
+                    chatMessage.setContentType(contentType);
+
                     setChatRecordAsRead(id, userId);
-                    //setChatRecordAsRead(id, friendId);
                     // 将聊天消息对象添加到聊天历史记录列表中
                     chatHistory.add(chatMessage);
                 }
@@ -398,6 +576,7 @@ public class DatabaseConnection {
                 group.setName(resultSet.getString("name"));
                 group.setDescription(resultSet.getString("description"));
                 group.setAvatar(resultSet.getString("avatar_path"));
+                group.setCreatedBy(resultSet.getInt("created_by"));
                 System.out.println("群众："+group);
                 groups.add(group);
             }
@@ -1285,6 +1464,7 @@ public class DatabaseConnection {
             }
 
             // 查询所有的管理员和群主的 ID
+            System.out.println("查询所有的管理员和群主的 ID"+groupId);
             List<Integer> adminIds = getAdminIdsByGroupId(groupId);
             if (adminIds.isEmpty()) {
                 System.out.println("No admins or creators found for the group");
@@ -1411,9 +1591,452 @@ public class DatabaseConnection {
     }
 
 
+    public int insertGroupMessage(int senderId, int groupId, String messageContent, String contentType, String fileName) {
+        String insertMessageQuery = "INSERT INTO messages (sender_id, group_id, content, content_type, file_name) VALUES (?, ?, ?, ?, ?)";
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(insertMessageQuery, Statement.RETURN_GENERATED_KEYS)) {
+            preparedStatement.setInt(1, senderId);
+            preparedStatement.setInt(2, groupId);
+            preparedStatement.setString(3, messageContent);
+            preparedStatement.setString(4, contentType);
+            preparedStatement.setString(5, fileName);
+            preparedStatement.executeUpdate();
+
+            // 获取插入消息的id
+            try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    return generatedKeys.getInt(1);
+                } else {
+                    throw new SQLException("插入消息失败，无法获取生成的ID。");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return -1;
+        }
+    }
+
+    public List<User1> getGroupMembers(int groupId, int senderId) {
+        List<User1> groupMembers = new ArrayList<>();
+        try {
+            String query = "SELECT u.* FROM users u " +
+                    "JOIN group_members gm ON u.id = gm.user_id " +
+                    "WHERE gm.group_id = ? AND gm.status = 'active' AND u.id <> ?";
+            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            PreparedStatement ps = connection.prepareStatement(query);
+            ps.setInt(1, groupId);
+            ps.setInt(2, senderId);
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String username = rs.getString("username");
+                String email = rs.getString("email");
+                String avatar = rs.getString("avatar");
+                String nickname = rs.getString("nickname");
+                String gender = rs.getString("gender");
+                LocalDate birthday = rs.getDate("birthday").toLocalDate();
+                String signature = rs.getString("signature");
+                String status = rs.getString("status");
+                LocalDate createdAt = rs.getTimestamp("created_at").toLocalDateTime().toLocalDate();
+                LocalDate updatedAt = rs.getTimestamp("updated_at").toLocalDateTime().toLocalDate();
+
+                User1 user = new User1(id, username, email, avatar, nickname, gender, birthday, signature, status, createdAt, updatedAt);
+                groupMembers.add(user);
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return groupMembers;
+    }
+
+    public boolean handleRemoveGroupMembers(int groupId) {
+        String query = "DELETE FROM group_members WHERE group_id = ?";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, groupId);
+
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            return rowsAffected > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    public boolean handleDisbandGroup(int groupId) {
+        String query = "DELETE FROM `groups` WHERE id = ?";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, groupId);
+
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            return rowsAffected > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    public List<User1> getGroupMembers1(int groupId, int excludeUserId) {
+        String query = "SELECT user_id FROM group_members WHERE group_id = ? AND user_id != ?";
+        List<User1> groupMembers = new ArrayList<>();
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, groupId);
+            preparedStatement.setInt(2, excludeUserId);
+
+            ResultSet rs = preparedStatement.executeQuery();
+
+            while (rs.next()) {
+                int userId = rs.getInt("user_id");
+                // 假设你有一个方法可以通过用户ID获取用户对象
+                User1 user = getUserById(userId);
+                groupMembers.add(user);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return groupMembers;
+    }
+
+    public boolean setGroupOwner(int userId, int groupId) {
+        String query = "UPDATE `groups` SET created_by = ? WHERE id = ?";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, userId);
+            preparedStatement.setInt(2, groupId);
+
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            return rowsAffected > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean deleteChatRecordsByGroupId(int groupId) {
+        String query = "DELETE chat_records FROM chat_records INNER JOIN messages ON chat_records.message_id = messages.id WHERE messages.group_id = ?";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, groupId);
+
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            return rowsAffected > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    public boolean deleteMessagesByGroupId(int groupId) {
+        String query = "DELETE FROM messages WHERE group_id = ?";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, groupId);
+
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            return rowsAffected > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+        public boolean updateGroupInfo(Group1 group) {
+            String sql = "UPDATE  `groups` SET name = ?, description = ?, avatar_path = ?, updated_at = NOW() WHERE id = ?";
+            try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                    PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, group.getName());
+                pstmt.setString(2, group.getDescription());
+                pstmt.setString(3, group.getAvatar());
+                pstmt.setInt(4, group.getId());
+                int affectedRows = pstmt.executeUpdate();
+                return affectedRows > 0;
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+
+    public boolean setGroupAdmin(int groupId, int userId) {
+        String query = "UPDATE group_members SET role = 'admin' WHERE group_id = ? AND user_id = ? AND status = 'active'";
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, groupId);
+            preparedStatement.setInt(2, userId);
+
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            return rowsAffected > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public int kickOutGroup(int groupId, int userId, int currentUserId) {
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+
+            String query = "SELECT role FROM group_members WHERE group_id = ? AND user_id = ?";
+            PreparedStatement preparedStatement = connection.prepareStatement(query);
+
+            // Check the role of current user
+            preparedStatement.setInt(1, groupId);
+            preparedStatement.setInt(2, currentUserId);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                String role = resultSet.getString("role");
+                if ("creator".equals(role)) {
+                    // If the current user is the group creator, he can kick out any member
+                    query = "DELETE FROM group_members WHERE group_id = ? AND user_id = ?";
+                } else {
+                    // If the current user is not the group creator, he cannot kick out creator or admin
+                    query = "DELETE FROM group_members WHERE group_id = ? AND user_id = ? AND role != 'creator' AND role != 'admin'";
+                }
+            }
+
+            // Perform the delete operation
+            preparedStatement = connection.prepareStatement(query);
+            preparedStatement.setInt(1, groupId);
+            preparedStatement.setInt(2, userId);
+
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            return rowsAffected;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return 0;
+    }
+
+    public int SetMember(int groupId, int userId, int currentUserId) {
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+            String query = "SELECT role FROM group_members WHERE group_id = ? AND user_id = ?";
+            PreparedStatement preparedStatement = connection.prepareStatement(query);
+            preparedStatement.setInt(1, groupId);
+            preparedStatement.setInt(2, currentUserId);
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            if (resultSet.next()) {
+                String role = resultSet.getString("role");
+                if ("creator".equals(role)) {
+                    query = "UPDATE group_members SET role = 'member' WHERE group_id = ? AND user_id = ? AND role <> 'creator'";
+                    preparedStatement = connection.prepareStatement(query);
+                    preparedStatement.setInt(1, groupId);
+                    preparedStatement.setInt(2, userId);
+                    return preparedStatement.executeUpdate();
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    public List<Integer> getGroupAdmins(int groupId) {
+        String query = "SELECT user_id FROM group_members WHERE group_id = ? AND role IN ('creator', 'admin')";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, groupId);
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            List<Integer> adminIds = new ArrayList<>();
+            while (resultSet.next()) {
+                adminIds.add(resultSet.getInt("user_id"));
+            }
+
+            return adminIds;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return Collections.emptyList();
+    }
+    public List<ChatMessage1> getGroupChatHistory(int groupId) {
+        List<ChatMessage1> chatHistory = new ArrayList<>();
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+            String sql = "SELECT m.id, m.sender_id, m.group_id, m.content, m.content_type, m.created_at, " +
+                    "u.username, u.nickname, u.avatar " +
+                    "FROM messages m " +
+                    "JOIN users u ON m.sender_id = u.id " +
+                    "WHERE m.group_id = ? " +
+                    "ORDER BY m.created_at ASC";
+
+            PreparedStatement statement = conn.prepareStatement(sql);
+            statement.setInt(1, groupId);
+
+            ResultSet resultSet = statement.executeQuery();
+
+            while (resultSet.next()) {
+                int id = resultSet.getInt("id");
+                int senderId = resultSet.getInt("sender_id");
+                String content = resultSet.getString("content");
+                String contentType = resultSet.getString("content_type");
+                ZoneId zoneId = ZoneId.of("UTC");
+                LocalDateTime createdAt = resultSet.getTimestamp("created_at").toInstant().atZone(zoneId).toLocalDateTime();
+
+                String senderUsername = resultSet.getString("username");
+                String senderAvatar = resultSet.getString("avatar");
+                String senderNickname = resultSet.getString("nickname");
+
+                User1 sender = new User1(senderId, senderUsername, senderAvatar, senderNickname);
+
+                ChatMessage1 chatMessage = new ChatMessage1(id, sender, content, false, createdAt);
+                chatMessage.setGroupId(groupId);
+                chatMessage.setContentType(contentType);
+
+                chatHistory.add(chatMessage);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return chatHistory;
+    }
+
+    public boolean deleteRequestsByGroupId(int groupId) {
+        // 使用try-with-resources语句确保PreparedStatement和Connection的正确关闭
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement pstmt = connection.prepareStatement("DELETE FROM requests WHERE group_id = ?")) {
+
+            // 设置groupId
+            pstmt.setInt(1, groupId);
+
+            // 执行删除操作
+            int affectedRows = pstmt.executeUpdate();
+
+            // 如果affectedRows大于0，则说明至少有一行被成功更新了
+            return affectedRows > 0;
+
+        } catch (SQLException ex) {
+            System.out.println(ex.getMessage());
+            return false;
+        }
+    }
+
+    public boolean addPhrase(UserCommonPhrase1 phrase) {
+        try {
+            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            String query = "INSERT INTO user_common_phrases (user_id, phrase) VALUES (?, ?)";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, phrase.getUserId());
+            statement.setString(2, phrase.getPhrase());
+
+            return statement.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean editPhrase(UserCommonPhrase1 oldPhrase, UserCommonPhrase1 newPhrase) {
+        try {
+            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            String query = "UPDATE user_common_phrases SET phrase = ? WHERE user_id = ? AND phrase = ?";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1, newPhrase.getPhrase());
+            statement.setInt(2, oldPhrase.getUserId());
+            statement.setString(3, oldPhrase.getPhrase());
+
+            return statement.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean deletePhrase(UserCommonPhrase1 phrase) {
+        try {
+            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            String query = "DELETE FROM user_common_phrases WHERE user_id = ? AND phrase = ?";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, phrase.getUserId());
+            statement.setString(2, phrase.getPhrase());
+
+            return statement.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public List<String> getUserPhrases(int userId) {
+        List<String> phrases = new ArrayList<>();
+
+        try (
+                Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                PreparedStatement stmt = connection.prepareStatement("SELECT phrase FROM user_common_phrases WHERE user_id = ?")) {
+            stmt.setInt(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    phrases.add(rs.getString("phrase"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return phrases;
+    }
+
+
+
+
+
+    /*public int kickOutGroup(int groupId, int userId) {
+        String query = "UPDATE group_members SET status = 'removed' WHERE group_id = ? AND user_id = ? AND role != 'creator' AND role != 'admin'";
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, groupId);
+            preparedStatement.setInt(2, userId);
+
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            return rowsAffected;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return 0;
+    }*/
+
 }
 
-/*
-如果 updateUserPassword 方法没有处理这个异常，那么这个异常将继续向上抛给调用 updateUserPassword 方法的代码。
-如果异常没有被任何方法捕获和处理，最终它将抛给 JVM，导致程序终止运行并输出异常信息。
- */
+

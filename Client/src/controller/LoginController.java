@@ -12,6 +12,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
@@ -74,6 +76,20 @@ public class LoginController {
 
     // 初始化方法，在FXML加载完毕后自动调用
     public void initialize() {
+
+        //用来实现按回车键实现登入，UserNameInput或Userpassword文本框中按下回车键时，这个事件处理器就会被触发，并调用Luck()方法。
+        EventHandler<KeyEvent> onEnterPress = event -> {
+            if (event.getCode() == KeyCode.ENTER) {
+                try {
+                    Luck();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        UserNameInput.setOnKeyPressed(onEnterPress);
+        Userpassword.setOnKeyPressed(onEnterPress);
+
         // 读取登录文件，将其中的用户名填充到ComboBox
         Properties loginCredentials = readLoginFxml();
         if (loginCredentials != null) {

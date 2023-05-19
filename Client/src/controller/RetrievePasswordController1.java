@@ -179,8 +179,7 @@ public class RetrievePasswordController1 {
                 String response = in.readLine();
                 if (response.equals("success")) {
                     showAlert(Alert.AlertType.INFORMATION, "成功", "密码重置成功");
-                    // 跳转到登录页面
-                    // ...
+
                 } else {
                     //showAlert(Alert.AlertType.ERROR, "错误", "密码重置失败，请检查您的信息是否正确");
                     showAlert(Alert.AlertType.ERROR, "错误", "密码重置失败，邮箱不匹配");

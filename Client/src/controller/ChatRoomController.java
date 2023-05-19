@@ -1,11 +1,16 @@
 package controller;
 
 import Util.ConnectionManager;
+import Util.EmoticonPicker;
+import Util.ZoomingPane;
 import client.ChatMessage;
 import client.Group;
 import client.Request;
 import client.User;
-import java.io.File;
+
+import java.awt.*;
+import java.io.*;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
@@ -25,12 +30,16 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.effect.Blend;
-import javafx.scene.effect.BlendMode;
-import javafx.scene.effect.ColorAdjust;
-import javafx.scene.effect.ColorInput;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.effect.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -40,19 +49,18 @@ import javafx.stage.StageStyle;
 import javafx.util.Callback;
 import javafx.util.Duration;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 
-public class ChatRoomController implements Util.ConnectionManager.MessageListener {
+public class ChatRoomController implements Util.ConnectionManager.MessageListener ,controller.CommonPhrasesController.PhraseSelectionListener{
 
     @FXML
     public Label PeopleName;
@@ -121,7 +129,6 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
     @FXML
     private ListView<ChatMessage> ChatRecord1;
 
-
     @FXML
     private HBox searchAndAddBox;
     @FXML
@@ -146,6 +153,11 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
     @FXML
     private ListView<User> friendsListView;
 
+    @FXML
+    private Button SendCommon;
+    @FXML
+    private ImageView common;
+
     public List<Stage> childStages = new ArrayList<>();
     private User activeChatFriend;
     public List<Stage> getChildStages() {
@@ -160,6 +172,11 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
         user.setMainController(this);
     }
 
+    @Override
+    public void onPhraseSelected(String phrase) {
+        // 将选择的常用语插入到消息输入框中
+        messageInput.setText(phrase);
+    }
 
     private ObservableList<User> observableFriendsList = FXCollections.observableArrayList();
 
@@ -167,21 +184,44 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
 
     }
     private ConnectionManager connectionManager;
-    //监听
     @Override
     public void onMessageReceived(ChatMessage message) {
+        System.out.println("onMessageReceived: " + message.getContent());
         Platform.runLater(() -> {
-            System.out.println("信息发送者："+message.getSender()+" 信息接收者："+activeReceiver.getId());
-            if (message.getSender().getId() == activeReceiver.getId()) {
-                addMessageToChatRecord(message.getSender(), message.getContent(), true,message.getUpdatedAt());
+            if (message.getGroupId()!=0) {
+                if (message.getGroupId() == currentGroupId) {
+                    addGroupMessageToChatRecord(message.getSender(), message.getContent(), true,message.getUpdatedAt(), message.getContentType(), message.getGroupId());
+                }
+            } else {
+                // handle private message
+                if (message.getSender().getId() == activeReceiver.getId()) {
+                    addMessageToChatRecord(message.getSender(), message.getContent(), true,message.getUpdatedAt(), message.getContentType());
+                }
             }
         });
     }
+    private int currentGroupId = 0;
+  /*  public void onGroupMessageReceived(ChatMessage message) {
+        Platform.runLater(() -> {
+            if (message.getGroupId() == currentGroupId) {
+                addGroupMessageToChatRecord(message.getSender(), message.getContent(), true,message.getUpdatedAt(), message.getContentType(), message.getGroupId());
+            }
+        });
+    }*/
 
-    private void addMessageToChatRecord(User sender, String content, boolean isSentByCurrentUser,LocalDateTime dateTimeFormatter) {
+    private void addGroupMessageToChatRecord(User sender, String content, boolean isSentByCurrentUser, LocalDateTime dateTimeFormatter, String contentType, int groupId) {
+        ChatMessage chatMessage = new ChatMessage(sender, content, dateTimeFormatter, groupId);
+        chatMessage.setContentType(contentType);
+        if (isSentByCurrentUser) {
+            chatMessage.setSentByCurrentUser(true);
+        }
+        chatRecordList.add(chatMessage);
+    }
+    private void addMessageToChatRecord(User sender, String content, boolean isSentByCurrentUser,LocalDateTime dateTimeFormatter,String contentType) {
         System.out.println("实际上："+dateTimeFormatter);
 
         ChatMessage chatMessage = new ChatMessage(sender, content, dateTimeFormatter);
+        chatMessage.setContentType(contentType);
         if (isSentByCurrentUser) {
             chatMessage.setSentByCurrentUser(true);
         }
@@ -190,6 +230,7 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
     }
     @Override
     public void onChatHistoryReceived(List<ChatMessage> chatHistory) {
+        System.out.println("onChatHistoryReceived: " + chatHistory.size() + " messages");
         Platform.runLater(() -> {
             // 清空当前的聊天记录
             messagesListView.getItems().clear();
@@ -199,7 +240,11 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
                 System.out.println("就觉得说出口: "+message.getCreatedAt());
                 System.out.println("消息："+message);
                 System.out.println("用户："+message.getSender());
-                addMessageToChatRecord(message.getSender(), message.getContent(), isSender,message.getCreatedAt());
+                if (message.getGroupId() != 0) {
+                    addGroupMessageToChatRecord(message.getSender(), message.getContent(), isSender,message.getCreatedAt(), message.getContentType(), message.getGroupId());
+                } else {
+                    addMessageToChatRecord(message.getSender(), message.getContent(), isSender,message.getCreatedAt(), message.getContentType());
+                }
             }
         });
     }
@@ -218,6 +263,8 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
         RequestPrompt.setFill(Color.WHITE);
         RequestPrompt.setOpacity(0.0);
     }
+    private static GroupInformation groupInformationController;
+    private static Transfer groupInformationController1;
 
     @FXML
     public void togglePin(ActionEvent event) {
@@ -230,7 +277,7 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
     }
 
 
-    // 在这个方法中初始化你的控制器
+    // 在这个方法中初始化控制器
         @FXML
         private void initialize() {
 
@@ -258,7 +305,21 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
             SendFile.setVisible(false);  //发送文件按钮消失
             Emoticons.setVisible(false); // 表情图片消失
             SendEmoticons.setVisible(false);// 发送表情包按钮消失
+            common.setVisible(false);
+            SendCommon.setVisible(false);
 
+            messageInput.setOnKeyPressed(event -> {
+                if (event.getCode() == KeyCode.ENTER) {
+                    // 判断是否按下了 shift 键，如果是，则插入换行符
+                    if (event.isShiftDown()) {
+                        messageInput.appendText("\n");
+                    } else {
+                        // 否则，发送消息
+                        event.consume(); // 防止事件进一步传播
+                        sendButton.fire(); // 触发 sendButton 的 ActionEvent
+                    }
+                }
+            });
 
 
             ChatRecord1.setCellFactory(new Callback<ListView<ChatMessage>, ListCell<ChatMessage>>() {
@@ -272,7 +333,7 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
                         private Region spacer = new Region();
 
                         private HBox header = new HBox(10, spacer, senderName, timestamp);
-                        private VBox contentBox = new VBox(content);
+                        private VBox contentBox = new VBox();// 这里移除了 content
                         private VBox messageBox = new VBox(header, contentBox);
 
                         {
@@ -297,11 +358,84 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
                         protected void updateItem(ChatMessage chatMessage, boolean empty) {
                             super.updateItem(chatMessage, empty);
                             //System.out.println("时间家家户户："+chatMessage);
+                           // contentBox.getChildren().clear();  // 防止滑动界面导致多个按钮出现。。清空 contentBox
+                           /* if (chatMessage != null) {
+                                content.setText(chatMessage.getContent());
+                                contentBox.getChildren().add(content); // 先添加content到contentB
+                                if (chatMessage.getContentType().equals("file")) {
+                                    // 如果这个消息包含一个文件，创建一个链接或按钮来打开这个文件
+                                    Button openFileButton = new Button("Open File");
+                                    openFileButton.setOnAction(event -> {
+                                        try {
+                                            Desktop.getDesktop().open(new File(chatMessage.getContent()));
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
+                                        }
+                                    });
+                                    // 添加这个按钮到contentBox
+                                    contentBox.getChildren().add(openFileButton);
+                                }*/
+                            contentBox.getChildren().clear();  // 防止滑动界面导致多个按钮出现。。清空 contentBox
                             if (chatMessage != null) {
+                                if (chatMessage.getContentType().equals("file")) {
+                                    content.setText(chatMessage.getContent());
+                                    contentBox.getChildren().add(content);
+                                    // 如果这个消息包含一个文件，创建一个链接或按钮来打开这个文件
+                                    Button openFileButton = new Button("Open File");
+                                    openFileButton.setOnAction(event -> {
+                                        try {
+                                            Desktop.getDesktop().open(new File(chatMessage.getContent()));
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
+                                        }
+                                    });
+                                    // 添加这个按钮到contentBox
+                                    contentBox.getChildren().add(openFileButton);
+                                    // 如果这个消息是一个图片，显示这个图片
+                                } else if (chatMessage.getContentType().equals("image")) {
+                                    byte[] decodedBytes = Base64.getDecoder().decode(chatMessage.getContent());
+                                    InputStream inputStream = new ByteArrayInputStream(decodedBytes);
+                                    Image image = new Image(inputStream);
+                                    ImageView imageView = new ImageView(image);
+                                    imageView.setFitHeight(150); // 设置图片的最大高度
+                                    imageView.setPreserveRatio(true); // 保持图片的宽高比
+                                    contentBox.getChildren().add(imageView);
+
+                                    // 添加点击事件
+                                    imageView.setOnMouseClicked(event -> {
+                                        if (event.getClickCount() == 2) { // 双击打开新窗口
+                                            Image fullImage = new Image(new ByteArrayInputStream(decodedBytes));
+                                            ImageView fullImageView = new ImageView(fullImage);
+                                            ZoomingPane zoomingPane = new ZoomingPane(fullImageView);
+                                            ScrollPane scrollPane = new ScrollPane(zoomingPane);
+                                            scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+                                            scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+                                            scrollPane.setPannable(true);
+
+                                            Scene scene = new Scene(scrollPane, 800, 600);
+                                            scene.setOnScroll(scrollEvent -> {
+                                                if (scrollEvent.getDeltaY() > 0) {
+                                                    zoomingPane.zoomIn();
+                                                } else {
+                                                    zoomingPane.zoomOut();
+                                                }
+                                            });
+
+                                            Stage stage = new Stage();
+                                            stage.setScene(scene);
+                                            stage.show();
+                                        }
+                                    });
+                                } else {
+                                    content.setText(chatMessage.getContent());
+                                    if (!contentBox.getChildren().contains(content)) {
+                                        contentBox.getChildren().add(content); // 先添加content到contentB
+                                    }
+                                }
                                 imageView.setImage(new Image(chatMessage.getSender().getAvatar()));
                                 imageView.setFitHeight(50);
                                 imageView.setFitWidth(50);
-                               // senderName.setText(chatMessage.getSender().getNickname());
+                                // senderName.setText(chatMessage.getSender().getNickname());
                                 System.out.println(chatMessage);
                                 //senderName.setStyle("-fx-font-size: 18px;"); // 18px 是一个示例值，可以根据需要调整
                                 System.out.println("发送者："+chatMessage.getSender());
@@ -310,8 +444,8 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
                                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                                 timestamp.setText(chatMessage.getUpdatedAt().format(formatter));
                                 // 创建一个新的HBox来容纳时间戳
-                               // HBox timestampBox = new HBox();
-                               // timestampBox.setAlignment(Pos.CENTER); // 让时间戳在HBox中居中
+                                // HBox timestampBox = new HBox();
+                                // timestampBox.setAlignment(Pos.CENTER); // 让时间戳在HBox中居中
 
                                 // 将时间戳添加到新的HBox
                                 //timestampBox.getChildren().add(timestamp);
@@ -349,8 +483,6 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
                 }
             });
 
-
-
             // 设置列表的单元格工厂
             friendsListView.setCellFactory(new Callback<ListView<User>, ListCell<User>>() {
                 @Override
@@ -379,6 +511,10 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
                                 SendFile.setVisible(true);  //发送文件按钮出现
                                 Emoticons.setVisible(true); // 表情图片出现
                                 SendEmoticons.setVisible(true);// 发送表情包按钮出现
+                                common.setVisible(true);
+                                SendCommon.setVisible(true);
+                                currentGroupId=0;
+                                messageInput.clear();
 
                                 System.out.println("发送消息按钮被点击：" + user.getUsername());
                                 System.out.println("发送消息按钮被点击：" + user.getNickname());
@@ -489,64 +625,6 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
                     };
                 }
             });
-            AtomicReference<File> chosenFileRef = new AtomicReference<>();
-            SendFile.setOnAction(event -> {
-                // 创建一个文件选择器
-                FileChooser fileChooser = new FileChooser();
-                fileChooser.setTitle("选择文件");
-                // 显示文件选择对话框并获取选择的文件
-                File chosenFile = fileChooser.showOpenDialog(messageInput.getScene().getWindow());
-                if (chosenFile != null) {
-                    // 将选择的文件的路径显示在消息输入框中
-                    messageInput.setText(chosenFile.getAbsolutePath());
-                    // 保存chosenFile到AtomicReference
-                    chosenFileRef.set(chosenFile);
-                }
-            });
-            sendButton.setOnAction(event -> {
-                if (receiverId == 0) {
-                    // 如果没有选择聊天对象，不发送消息
-                    return;
-                }
-                String messageText = messageInput.getText().trim();
-                if (!messageText.isEmpty()) {
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                    LocalDateTime currentTime = LocalDateTime.now();
-                    String currentTimeStr = currentTime.format(formatter);
-                    System.out.println("时间是："+currentTime);
-                    JsonObject messageObject = new JsonObject();
-                    messageObject.addProperty("senderId", currentUser.getId());
-                    messageObject.addProperty("receiverId", receiverId);
-                    messageObject.addProperty("timestamp", currentTimeStr);
-
-                    // 从AtomicReference获取chosenFile
-                    File chosenFile = chosenFileRef.get();
-
-                    // 如果选择了文件，则将文件转换为Base64编码的字符串
-                    if (chosenFile != null) {
-                        try {
-                            byte[] fileContent = Files.readAllBytes(chosenFile.toPath());
-                            String encodedString = Base64.getEncoder().encodeToString(fileContent);
-                            messageObject.addProperty("content", encodedString);
-                            messageObject.addProperty("content_type", "file");
-                            messageObject.addProperty("file_name", chosenFile.getName());
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            return;
-                        }
-                    } else {
-                        messageObject.addProperty("content", messageText);
-                        messageObject.addProperty("content_type", "text");
-                    }
-
-                    String messageString = messageObject.toString();
-                    connectionManager.getOut().println("sendMessageLongConnection:" + messageString);
-                    addMessageToChatRecord(currentUser, messageText, true, currentTime);
-                    messageInput.clear();
-                    // 清空AtomicReference
-                    chosenFileRef.set(null);
-                }
-            });
 
 
             // 在initialize方法中，将群聊列表数据设置到ListView中
@@ -570,7 +648,22 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
                                 setStyle("-fx-font-size: 20px;");
                                 setGraphic(imageView);
 
-                                // Create the context menu with four menu items
+                                List<Integer> admins = new ArrayList<>();  // 将 admins 的声明移动到 try 代码块之前
+                                // 向服务端发送 "getGroupAdmins" 请求，获取群主和管理员的 ID
+                                try(Socket socket = new Socket("127.0.0.1", 6000);
+                                    PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                                    BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))){
+                                    out.println("getGroupAdmins:" + group.getId());
+
+                                    String response = in.readLine();
+                                    String[] adminIds = response.split(",");
+                                    admins = Arrays.stream(adminIds)
+                                            .map(Integer::parseInt)
+                                            .collect(Collectors.toList());
+
+                                } catch (IOException e){
+                                    e.printStackTrace();
+                                }
                                 ContextMenu contextMenu = new ContextMenu();
                                 MenuItem sendMessageItem = new MenuItem("发信息");
                                 MenuItem quitGroupItem = new MenuItem("退出群");
@@ -578,32 +671,204 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
                                 MenuItem manageGroupItem = new MenuItem("管理群");
                                 MenuItem viewGroupItem = new MenuItem("查看群");
 
+                                System.out.println("管理员群主："+admins);
+                                System.out.println("当前登入者："+currentUser.getId());
+                                System.out.println(admins.contains(currentUser.getId()));
+                                boolean containsCurrentUser = admins.stream().map(Object::toString)
+                                        .anyMatch(adminId -> adminId.equals(String.valueOf(currentUser.getId())));
+                                System.out.println(containsCurrentUser);
+                                //如果是群主则可以进行一下按钮
+                                if (currentUser.getId() == group.getCreatedBy()){
+                                    disbandGroupItem.setVisible(true);
+                                    manageGroupItem.setVisible(true);
+                                }else {
+                                    disbandGroupItem.setVisible(false);
+                                    manageGroupItem.setVisible(false);
+                                }
+
+                                //如果是管理员则可以进行以下按钮 管理群
+                                if (containsCurrentUser) {
+                                    manageGroupItem.setVisible(true);
+                                } else {
+                                    manageGroupItem.setVisible(false);
+                                }
+
                                 contextMenu.getItems().addAll(sendMessageItem, quitGroupItem, disbandGroupItem, manageGroupItem,viewGroupItem);
 
                                 sendMessageItem.setOnAction(event -> {
                                     // Handle sending message
                                     System.out.println("发送信息按钮被点击");
+                                    sendButton.setVisible(true);
+                                    messageInput.setVisible(true);
+                                    ChatRecord1.setVisible(true);
+                                    PeopleName.setVisible(true);
+                                    File.setVisible(true);// 文件图片出现
+                                    SendFile.setVisible(true);  //发送文件按钮出现
+                                    Emoticons.setVisible(true); // 表情图片出现
+                                    SendEmoticons.setVisible(true);// 发送表情包按钮出现
+                                    PeopleName.setText(group.getName());
+                                    currentGroupId = group.getId();  // 设置当前的群聊id
+                                    common.setVisible(true);
+                                    SendCommon.setVisible(true);
+                                    chatRecordList.clear();
+                                    receiverId=0;
+                                    messageInput.clear();
+                                    // 发送获取群聊记录的请求
+                                    connectionManager.getOut().println("getGroupChatHistory:" + group.getId());
                                 });
 
                                 quitGroupItem.setOnAction(event -> {
                                     // Handle quitting the group
                                     System.out.println("退出群按钮被点击");
-                                });
+                                    //首先判断退出者是不是群主，如果是群主则，在退出前给群主一个选择
+                                    //将群转交给群中其他人
+                                    System.out.println("currentUser.getId() "+currentUser.getId()+"  "+"group.getCreatedBy())"+group.getCreatedBy());
+                                    if (currentUser.getId() == group.getCreatedBy()) {
+                                        // 提示用户他是群主，是否要转让群主
+                                        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                                        alert.setTitle("退出群聊");
+                                        alert.setHeaderText("您是群主，是否要在退出前转让群主？");
+                                        alert.setContentText("选择您的选项.");
 
+                                        ButtonType buttonTypeOne = new ButtonType("转让群主");
+                                        ButtonType buttonTypeTwo = new ButtonType("直接退出并解散群聊");
+                                        ButtonType buttonTypeThree = new ButtonType("取消");
+
+                                        alert.getButtonTypes().setAll(buttonTypeOne, buttonTypeTwo,buttonTypeThree);
+
+                                        Optional<ButtonType> result = alert.showAndWait();
+                                        if (result.get() == buttonTypeOne){
+                                            // 用户选择转让群主，发送获取群成员请求，然后在接收到响应后显示选择新群主的界面
+                                            String request = "getGroupMembers:" + group.getId()+ ":" + currentUser.getId();
+                                            connectionManager.getOut().println(request);
+                                            try {
+                                                // 加载新的窗口
+                                                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Transfer.fxml"));
+                                                Parent root = loader.load();
+
+                                                // 获取控制器
+                                                groupInformationController1 = loader.getController();
+                                                Transfer transfer = loader.getController();
+                                                transfer.setcurrentGroupId(group.getId());
+                                                // 在界面上删除群聊
+                                                Platform.runLater(() -> {
+                                                    groupList.remove(group);
+                                                });
+
+                                                // 创建新的场景并显示
+                                                Stage stage = new Stage();
+                                                stage.setScene(new Scene(root));
+                                                stage.show();
+                                            } catch (IOException e) {
+                                                e.printStackTrace();
+                                            }
+                                        } else if (result.get() == buttonTypeTwo) {
+                                            // 用户选择直接退出，发送解散群聊请求
+                                            System.out.println("解散群聊");
+                                            String request = "disbandGroup:" + currentUser.getId() + ":" + group.getId();
+                                            connectionManager.getOut().println(request);
+
+                                            // 在界面上删除群聊
+                                            Platform.runLater(() -> {
+                                                groupList.remove(group);
+                                            });
+                                        }
+                                    } else {
+                                        // 发送退出群聊的请求到服务器
+                                       String request = "quitGroup:" + currentUser.getId() + ":" + group.getId();
+                                       connectionManager.getOut().println(request);
+                                        // 在界面上删除群聊
+                                      Platform.runLater(() -> {
+                                          groupList.remove(group);
+                                       });
+                                    }
+                                });
                                 disbandGroupItem.setOnAction(event -> {
-                                    // Handle disbanding the group
+                                    //这个按钮只有群主才会显示出来
                                     System.out.println("解散群按钮被点击");
-                                });
+                                    // 提示用户他是群主，是否要转让群主
+                                    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                                    alert.setTitle("解散群聊");
+                                    alert.setHeaderText("您是群主，是否确定解散群聊？");
+                                    alert.setContentText("选择您的选项.");
 
+                                    ButtonType buttonTypeOne = new ButtonType("确定");
+                                    ButtonType buttonTypeTwo = new ButtonType("取消");
+
+                                    alert.getButtonTypes().setAll(buttonTypeOne, buttonTypeTwo);
+
+                                    Optional<ButtonType> result = alert.showAndWait();
+                                    if(result.get()==buttonTypeOne) {
+                                        //解散群聊
+                                        String request = "disbandGroup:" + currentUser.getId() + ":" + group.getId();
+                                        connectionManager.getOut().println(request);
+                                        // 在界面上删除群聊
+                                        Platform.runLater(() -> {
+                                            groupList.remove(group);
+                                        });
+
+                                    } else if (result.get()==buttonTypeTwo) {
+                                    }
+                                });
                                 manageGroupItem.setOnAction(event -> {
-                                    // Handle managing the group
+                                    // 这个按钮群主和管理员都能显示出来
                                     System.out.println("管理群按钮被点击");
+                                    // 向服务器发送查看群聊信息的请求
+                                    try(Socket socket = new Socket("127.0.0.1", 6000);//IP:127.0.0.1   端口6000
+                                        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                                        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))){
+
+                                        String request ="getGroupInfo:" + group.getId();
+                                        out.println(request);
+
+                                        String response = in.readLine();
+                                        System.out.println("群管理："+response);
+
+                                        // 将 JSON 字符串转换回 Group 对象
+                                        Group group1 = new Gson().fromJson(response, Group.class);
+                                        try {
+                                            // 这部分代码替换你现有的加载新窗口的代码
+                                            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/GroupInformation2.fxml"));
+                                            Parent root = loader.load();
+
+                                            GroupInformation2 controller = loader.getController();
+                                            controller.setGroup(group1);
+                                            controller.setcurrentGroupId(group.getId(),currentUser);
+
+                                            Stage stage = new Stage();
+                                            stage.setScene(new Scene(root));
+                                            stage.show();
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
+                                        }
+                                    } catch (UnknownHostException e) {
+                                        throw new RuntimeException(e);
+                                    } catch (IOException e) {
+                                        throw new RuntimeException(e);
+                                    }
                                 });
 
                                 viewGroupItem.setOnAction(event -> {
-                                    System.out.println("查看群聊消息被点击");
-                                });
+                                    System.out.println("查看群聊资料被点击");
+                                    // 向服务器发送查看群聊信息的请求
+                                    connectionManager.getOut().println("getGroupInfo:" + group.getId());
 
+                                    try {
+                                        // 加载新的窗口
+                                        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/GroupInformation.fxml"));
+                                        Parent root = loader.load();
+
+                                        // 获取控制器
+                                        groupInformationController = loader.getController();
+
+                                        // 创建新的场景并显示
+                                        Stage stage = new Stage();
+                                        stage.setScene(new Scene(root));
+                                        stage.show();
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                });
                                 // Set the context menu to the cell
                                 setContextMenu(contextMenu);
                             } else {
@@ -615,9 +880,169 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
                     };
                 }
             });
+
+            //用来处理发送消息
+            AtomicReference<String> chosenEmoticonRef = new AtomicReference<>();
+            SendEmoticons.setOnAction(event -> {
+                // 创建一个表情选择器
+                EmoticonPicker emoticonPicker = new EmoticonPicker();
+                emoticonPicker.setTitle("选择表情");
+                // 显示表情选择对话框并获取选择的表情
+                Optional<String> chosenEmoticon = emoticonPicker.showAndWait();
+                chosenEmoticon.ifPresent(s -> {
+                    // 将选择的表情插入到消息输入框中
+                    String currentText = messageInput.getText();
+                    messageInput.setText(currentText + " " + s);
+                    // 保存chosenEmoticon到AtomicReference
+                    chosenEmoticonRef.set(s);
+                });
+            });
+
+            AtomicReference<File> chosenFileRef = new AtomicReference<>();
+            SendFile.setOnAction(event -> {
+                // 创建一个文件选择器
+                FileChooser fileChooser = new FileChooser();
+                fileChooser.setTitle("选择文件");
+                // 显示文件选择对话框并获取选择的文件
+                File chosenFile = fileChooser.showOpenDialog(messageInput.getScene().getWindow());
+                if (chosenFile != null) {
+                    // 将选择的文件的路径显示在消息输入框中
+                    messageInput.setText(chosenFile.getAbsolutePath());
+                    // 保存chosenFile到AtomicReference
+                    chosenFileRef.set(chosenFile);
+                }
+            });
+            sendButton.setOnAction(event -> {
+                if (receiverId == 0&&currentGroupId == 0) {
+                    // 如果没有选择聊天对象，不发送消息
+                    return;
+                } else if (receiverId!=0) {
+                    String messageText = messageInput.getText().trim();
+                    if (!messageText.isEmpty()) {
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                        LocalDateTime currentTime = LocalDateTime.now();
+                        String currentTimeStr = currentTime.format(formatter);
+                        System.out.println("时间是："+currentTime);
+                        JsonObject messageObject = new JsonObject();
+                        messageObject.addProperty("senderId", currentUser.getId());
+                        messageObject.addProperty("receiverId", receiverId);
+                        messageObject.addProperty("timestamp", currentTimeStr);
+
+                        // 从AtomicReference获取chosenFile
+                        File chosenFile = chosenFileRef.get();
+
+                        // 如果选择了文件，则将文件转换为Base64编码的字符串
+                        if (chosenFile != null) {
+                            try {
+                                byte[] fileContent = Files.readAllBytes(chosenFile.toPath());
+                                String encodedString = Base64.getEncoder().encodeToString(fileContent);
+                                messageObject.addProperty("content", encodedString);
+                                // 检查文件是否为图片
+                                String fileName = chosenFile.getName();
+                                String fileExtension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+                                if (fileExtension.equals("jpg") || fileExtension.equals("png") || fileExtension.equals("gif")||fileExtension.equals("jpeg")) {
+                                    messageObject.addProperty("content_type", "image");
+                                    messageText = messageObject.get("content").getAsString();
+                                } else {
+                                    messageObject.addProperty("content_type", "file");
+                                }
+                                messageObject.addProperty("file_name", fileName);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                                return;
+                            }
+                        } else {
+                            messageObject.addProperty("content", messageText);
+                            messageObject.addProperty("content_type", "text");
+                        }
+
+                        String messageString = messageObject.toString();
+                        connectionManager.getOut().println("sendMessageLongConnection:" + messageString);
+
+                        String messageType = messageObject.get("content_type").getAsString();
+                        //String message = messageObject.get("content").getAsString();
+                        System.out.println("文件类型是："+messageType);
+                        System.out.println("发送的文本"+message);
+                        addMessageToChatRecord(currentUser, messageText, true, currentTime, messageType);
+                        messageInput.clear();
+                        // 清空AtomicReference
+                        chosenFileRef.set(null);
+                    }
+
+                } else if (currentGroupId!=0) {
+                    String messageText = messageInput.getText().trim();
+                    if (!messageText.isEmpty()) {
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                        LocalDateTime currentTime = LocalDateTime.now();
+                        String currentTimeStr = currentTime.format(formatter);
+                        System.out.println("时间是："+currentTime);
+                        JsonObject messageObject = new JsonObject();
+                        messageObject.addProperty("senderId", currentUser.getId());
+                        messageObject.addProperty("groupId", currentGroupId);
+                        messageObject.addProperty("timestamp", currentTimeStr);
+
+                        // 从AtomicReference获取chosenFile
+                        File chosenFile = chosenFileRef.get();
+
+                        // 如果选择了文件，则将文件转换为Base64编码的字符串
+                        if (chosenFile != null) {
+                            try {
+                                byte[] fileContent = Files.readAllBytes(chosenFile.toPath());
+                                String encodedString = Base64.getEncoder().encodeToString(fileContent);
+                                messageObject.addProperty("content", encodedString);
+                                // 检查文件是否为图片
+                                String fileName = chosenFile.getName();
+                                String fileExtension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+                                if (fileExtension.equals("jpg") || fileExtension.equals("png") || fileExtension.equals("gif")||fileExtension.equals("jpeg")) {
+                                    messageObject.addProperty("content_type", "image");
+                                    messageText = messageObject.get("content").getAsString();
+                                } else {
+                                    messageObject.addProperty("content_type", "file");
+                                }
+                                messageObject.addProperty("file_name", fileName);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                                return;
+                            }
+                        } else {
+                            messageObject.addProperty("content", messageText);
+                            messageObject.addProperty("content_type", "text");
+                        }
+
+                        String messageString = messageObject.toString();
+                        connectionManager.getOut().println("sendMessageGroupChat:" + messageString);//发送群聊消息
+
+                        String messageType = messageObject.get("content_type").getAsString();
+                        //String message = messageObject.get("content").getAsString();
+                        System.out.println("文件类型是："+messageType);
+                        System.out.println("发送的文本"+message);
+                        addGroupMessageToChatRecord(currentUser, messageText, true, currentTime, messageType,currentGroupId);
+
+                        messageInput.clear();
+                        // 清空AtomicReference
+                        chosenFileRef.set(null);
+                    }
+                }
+            });
+            SendCommon.setOnAction(event -> openCommonPhrasesWindow());
         }
 
+    public void openCommonPhrasesWindow() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/phrases_management.fxml"));
+            Stage stage = new Stage();
+            stage.setScene(new Scene(loader.load()));
+            stage.setTitle("常用语管理");
+            stage.show();
 
+            CommonPhrasesController controller = loader.getController();
+            System.out.println("用户你好1："+currentUser);
+            controller.setCurrentUser(currentUser);
+            controller.setPhraseSelectionListener(this);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 
     @FXML
@@ -657,6 +1082,8 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
         SendFile.setVisible(false);  //发送文件按钮消失
         Emoticons.setVisible(false); // 表情图片消失
         SendEmoticons.setVisible(false);// 发送表情包按钮消失
+        common.setVisible(false);
+        SendCommon.setVisible(false);
 
         FriendChat.setTextFill(Color.BLACK);// 好友按钮变色
         GroupChat.setTextFill(Color.GRAY);// 群聊按钮变回去
@@ -733,6 +1160,8 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
         SendFile.setVisible(false);  //发送文件按钮消失
         Emoticons.setVisible(false); // 表情图片消失
         SendEmoticons.setVisible(false);// 发送表情包按钮消失
+        common.setVisible(false);
+        SendCommon.setVisible(false);
 
 
         // 创建一个Socket连接到本地的6000端口
@@ -782,8 +1211,6 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
         groupChatsListView.refresh();
     }
 
-
-
     @FXML
     void friendsButton1(ActionEvent event) {
         PeopleName.setVisible(false);
@@ -796,6 +1223,8 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
         SendFile.setVisible(false);  //发送文件按钮消失
         Emoticons.setVisible(false); // 表情图片消失
         SendEmoticons.setVisible(false);// 发送表情包按钮消失
+        common.setVisible(false);
+        SendCommon.setVisible(false);
 
         // 获取当前场景
         Scene scene2 = ((Node) event.getSource()).getScene();
@@ -894,6 +1323,8 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
         SendFile.setVisible(false);  //发送文件按钮消失
         Emoticons.setVisible(false); // 表情图片消失
         SendEmoticons.setVisible(false);// 发送表情包按钮消失
+        common.setVisible(false);
+        SendCommon.setVisible(false);
 
         // 获取当前场景
         Scene scene2 = ((Node) event.getSource()).getScene();
@@ -1016,6 +1447,8 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
         SendFile.setVisible(false);  //发送文件按钮消失
         Emoticons.setVisible(false); // 表情图片消失
         SendEmoticons.setVisible(false);// 发送表情包按钮消失
+        common.setVisible(false);
+        SendCommon.setVisible(false);
 
         Scene scene2 = ((Node) event.getSource()).getScene();
 
@@ -1403,6 +1836,17 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
     public void setConnectionManager(ConnectionManager connectionManager) {
         this.connectionManager = connectionManager;
         //startPeriodicTask(); // 在设置 ConnectionManager 对象后启动周期检测
+    }
+
+    public static GroupInformation getGroupInformationController() {
+        return groupInformationController;
+    }
+    public static Transfer getGroupInformationController1() {
+        return groupInformationController1;
+    }
+
+    public void chooseCommonPhrase(ActionEvent actionEvent) {
+
     }
 }
 

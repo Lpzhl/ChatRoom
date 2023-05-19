@@ -102,7 +102,7 @@ public class SnowflakeIdWorker {
         return System.currentTimeMillis();
     }
 
-    // 以上代码实现了Snowflake算法，这是一种分布式系统中生成唯一ID的方法。通过组合时间戳、数据中心ID、机器ID和序列号，我们可以保证生成的ID是全局唯一且趋势递增的。
+    // 实现了Snowflake算法，这是一种分布式系统中生成唯一ID的方法。通过组合时间戳、数据中心ID、机器ID和序列号，我们可以保证生成的ID是全局唯一且趋势递增的。
     // 这种ID生成策略在分布式系统中非常有用，例如在分布式数据库和消息队列等场景下。
 
 }

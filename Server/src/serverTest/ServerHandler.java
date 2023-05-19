@@ -3,10 +3,7 @@ package serverTest;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
-import server.ChatMessage1;
-import server.Group1;
-import server.Request1;
-import server.User1;
+import server.*;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -23,21 +20,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
+import java.util.stream.Collectors;
 
 // ServerHandler类实现了Runnable接口，允许在新线程中运行
 public class ServerHandler implements Runnable {
     private Socket socket; // 与客户端通信的套接字
     private DatabaseConnection dbConnection;// 数据库连接对象
+    private final Gson gson = new Gson(); // 用于将 JSON 字符串转换为 Java 对象
 
-    // 构造方法，接收一个Socket参数
-    /*
-    类的构造方法public ServerHandler(Socket socket)有两个主要作用：
-    保存客户端Socket到类成员变量中：当创建一个ServerHandler对象时，传入的socket参数代表与客户端的连接。将这个socket保存到ServerHandler类的成员变量中，使得在整个ServerHandler类中可以访问和操作这个与客户端的连接。
-    这样，在类的其他方法中，我们可以通过这个成员变量与客户端进行通信，例如接收客户端的请求和发送响应。
-    创建一个新的DatabaseConnection对象：DatabaseConnection类是用于与数据库进行通信的。
-    在ServerHandler的构造方法中创建一个新的DatabaseConnection对象，使得ServerHandler类可以在处理客户端请求时与数据库进行交互。
-    例如，当客户端发送登录请求时，ServerHandler需要查询数据库以验证用户名和密码是否匹配。通过在ServerHandler类中创建一个DatabaseConnection对象
-     */
     public  ServerHandler(Socket socket) {
         this.socket = socket;// 保存客户端Socket到类成员变量中
         dbConnection = new DatabaseConnection();// 创建一个新的DatabaseConnection对象
@@ -46,10 +36,7 @@ public class ServerHandler implements Runnable {
     @Override
     public void run() {
 
-        /*，因为它在所有处理请求的代码执行完毕后检查socket的状态。
-        这段代码的作用是在处理客户端请求之前检查socket是否已关闭。
-        如果socket已经关闭，它会打印“Socket is closed before entering ServerHandler”，否则会打印“Socket is open before entering ServerHandler”。
-        */
+
         if (socket.isClosed()) {
             System.out.println("Socket is closed before entering ServerHandler");
         } else {
@@ -86,6 +73,9 @@ public class ServerHandler implements Runnable {
                 case "login"://处理登入的请求
                     handleLogin(out, requestParts);
                     break;
+                case "getUserPhrases":
+                    handleGetUserPhrases(out, Integer.parseInt(requestParts[1]));
+                    break;
                 case "findDup": // 处理注册生成的ID是否重复
                     handlefinDup(out,requestParts[1]);
                     break;
@@ -98,6 +88,15 @@ public class ServerHandler implements Runnable {
                     break;
                 case "email_verification"://发送验证码请求
                     handleEmailVerification(out, requestParts);
+                    break;
+                case "addPhrase":
+                    handleAddPhrase(out, gson.fromJson(requestParts1[1], UserCommonPhrase1.class));
+                    break;
+                case "editPhrase":
+                    handleEditPhrase(out, gson.fromJson(requestParts1[1], EditPhraseRequest1.class));
+                    break;
+                case "deletePhrase":
+                    handleDeletePhrase(out, gson.fromJson(requestParts1[1], UserCommonPhrase1.class));
                     break;
                 case "emailLogin": // 处理邮箱登录的请求
                     handleEmailLogin(out, requestParts);
@@ -157,6 +156,9 @@ public class ServerHandler implements Runnable {
                     System.out.println("查看群聊："+requestParts1[1]);
                     handleGetGroupsRequest(out, requestParts1[1]);
                     break;
+                case "getGroupInfo":
+                    handleGetGroupInfo(out, requestParts);
+                    break;
                 /*case "checkForNewMessages": // 处理检查新消息请求
                     handleCheckForNewMessages(out, requestParts);
                     break;*/
@@ -169,6 +171,22 @@ public class ServerHandler implements Runnable {
                     break;
                 case "deleteRequest":
                     handleDeleteRequest(out, requestParts);
+                    break;
+                case "update1":
+                    handleUpdateGroupInfo(out, requestParts1[1]);
+                    break;
+                case "setAdministrator":
+                    handleSetAdministrator(out,requestParts);
+                    break;
+                case "KickOutGroup":
+                    handleKickOutGroup(out,requestParts);
+                    break;
+                case "setMember":
+                    handleSetMember(out,requestParts);
+                    break;
+                case "getGroupAdmins":
+                    handleGetGroupAdmins(out,requestParts);
+                    break;
                 default:
                     out.println("error");
                     break;
@@ -198,7 +216,142 @@ public class ServerHandler implements Runnable {
                 e.printStackTrace();
             }
         }
+    }
 
+    private void handleGetUserPhrases(PrintWriter out, int userId) {
+        List<String> phrases = dbConnection.getUserPhrases(userId);
+
+        // Serialize the list to a JSON string and send it to the client
+        String response = gson.toJson(phrases);
+        out.println(response);
+    }
+    private void handleAddPhrase(PrintWriter out, UserCommonPhrase1 phrase) {
+        boolean success = dbConnection.addPhrase(phrase);
+        if (success) {
+            out.println("success");
+        } else {
+            out.println("error");
+        }
+    }
+
+    private void handleEditPhrase(PrintWriter out, EditPhraseRequest1 request) {
+        boolean success = dbConnection.editPhrase(request.getOldPhrase(), request.getNewPhrase());
+        if (success) {
+            out.println("success");
+        } else {
+            out.println("error");
+        }
+    }
+
+    private void handleDeletePhrase(PrintWriter out, UserCommonPhrase1 phrase) {
+        boolean success = dbConnection.deletePhrase(phrase);
+        if (success) {
+            out.println("success");
+        } else {
+            out.println("error");
+        }
+    }
+    private void handleGetGroupAdmins(PrintWriter out, String[] requestParts) {
+        int groupId = Integer.parseInt(requestParts[1]);
+
+        List<Integer> adminIds = dbConnection.getGroupAdmins(groupId);
+
+        // 向客户端发送管理员的 ID，每个 ID 用逗号分隔
+        out.println(String.join(",", adminIds.stream().map(String::valueOf).collect(Collectors.toList())));
+    }
+
+
+    private void handleSetMember(PrintWriter out, String[] requestParts) {
+        int userId = Integer.parseInt(requestParts[2]);//被执行人
+        int groupId = Integer.parseInt(requestParts[1]);//群号
+        int currentUserId = Integer.parseInt(requestParts[3]);//发起者
+
+        System.out.println("userId："+userId+"    currentUserId："+currentUserId);
+        System.out.println(userId == currentUserId );
+        if(userId == currentUserId ){
+            out.println("6");
+            return;
+        }
+        //可以先判断一下currentUserId是否是群主，如果是群主则可以设置任何人为普通成员，如果是管理员的话，则不可以设置任何人
+        int rowsAffected = dbConnection.SetMember(groupId, userId,currentUserId);
+
+        if (rowsAffected > 0) {
+            out.println("success");
+        } else {
+            out.println("failure");
+        }
+    }
+
+    private void handleKickOutGroup(PrintWriter out, String[] requestParts) {
+        int userId = Integer.parseInt(requestParts[2]);//被执行人
+        int groupId = Integer.parseInt(requestParts[1]);//群号
+        int currentUserId = Integer.parseInt(requestParts[3]);//发起者
+
+        //可以先判断一下currentUserId是否是群主，如果是群主则可以踢出任何人
+        System.out.println("userId："+userId+"    currentUserId："+currentUserId);
+        System.out.println(userId == currentUserId );
+        if(userId == currentUserId ){
+            out.println("6");
+            return;
+        }
+        int rowsAffected = dbConnection.kickOutGroup(groupId, userId,currentUserId);
+
+        if (rowsAffected > 0) {
+            out.println("success");
+        } else {
+            out.println("failure");
+        }
+    }
+
+    private void handleSetAdministrator(PrintWriter out, String[] requestParts) {
+        int userId = Integer.parseInt(requestParts[2]);
+        int groupId = Integer.parseInt(requestParts[1]);
+        int currentUserId = Integer.parseInt(requestParts[3]);//发起者
+
+        //可以先判断一下currentUserId是否是群主，如果是群主则可以踢出任何人
+        System.out.println("userId："+userId+"    currentUserId："+currentUserId);
+        System.out.println(userId == currentUserId );
+        if(userId == currentUserId ){
+            out.println("6");
+            return;
+        }
+        boolean success = dbConnection.setGroupAdmin(groupId, userId);
+
+        if (success) {
+            out.println("success");
+        } else {
+            out.println("failure");
+        }
+    }
+
+    private void handleUpdateGroupInfo(PrintWriter out, String requestPart) {
+        // 将请求的第二部分解析为 Group 对象
+        Group1 group = new Gson().fromJson(requestPart, Group1.class);
+
+        // 更新数据库中的群聊资料
+        boolean success = dbConnection.updateGroupInfo(group);
+        // 向客户端发送结果
+        if (success) {
+            out.println("success");
+        } else {
+            out.println("failure");
+        }
+    }
+
+    private void handleGetGroupInfo(PrintWriter out, String[] requestParts) {
+        // 提取群ID
+        int groupId = Integer.parseInt(requestParts[1]);
+
+        System.out.println("群ID"+groupId);
+        // 查询群信息
+        Group1 group = dbConnection.getGroupInfo(groupId);
+
+        // 将群信息转换为JSON字符串
+        String groupInfo = new Gson().toJson(group);
+        System.out.println("群资料是："+groupInfo);
+
+        // 将群信息发送给客户端
+        out.println(groupInfo);
     }
 
     private void handleAcceptGroupRequest(PrintWriter out, String requestPart) {
@@ -474,97 +627,6 @@ public class ServerHandler implements Runnable {
     }
 
 
-   /* private List<User1> onlineUsers = new ArrayList<>();
-
-    /**
-     * 处理用户登录请求的方法
-     * @param out 输出流，用于向客户端发送响应
-     * @param requestParts 请求参数数组，其中第二个元素应为用户名，第三个元素应为密码
-     */
-    /*private synchronized void handleLogin(PrintWriter out, String[] requestParts) {
-        // 如果请求参数的数量不等于3，返回错误信息
-        if (requestParts.length != 3) {
-            out.println("error");
-            return;
-        }
-
-        // 获取用户名和密码
-        String username = requestParts[1];
-        String password = requestParts[2];
-
-        // 检查用户名和密码是否正确
-        boolean loginSuccess = dbConnection.checkLogin(username, password);
-
-        if (loginSuccess) {
-            // 如果用户名和密码正确，从数据库中获取用户信息
-            User1 user1 = dbConnection.getUserByUsername(username);
-
-            // 判断该用户是否已经在在线用户列表中
-            boolean isAlreadyOnline = false;
-            for (User1 onlineUser : onlineUsers) {
-                if (onlineUser.getUsername().equals(username)) {
-                    isAlreadyOnline = true;
-                    break;
-                }
-            }
-            if (isAlreadyOnline) {
-                out.println("error:该用户已经登录");
-                return;
-            }
-
-            // 添加该用户到在线用户列表中
-            onlineUsers.add(user1);
-
-            // 使用Gson将用户信息转换为JSON格式
-            Gson gson = new Gson();
-            String userJson = gson.toJson(user1);
-
-            // 将成功的响应和用户信息发送给客户端
-            out.println("success:" + userJson);
-        } else {
-            // 如果用户名和密码不正确，发送失败的响应给客户端
-            out.println("error:用户名或密码错误");
-        }
-    }*/
-
-
-    /**
-     * 处理用户退出登录请求的方法
-     * @param username 用户名
-     */
-    /*private synchronized void handleLogout(String username) {
-        // 从在线用户列表中删除该用户
-        for (int i = 0; i < onlineUsers.size(); i++) {
-            if (onlineUsers.get(i).getUsername().equals(username)) {
-                onlineUsers.remove(i);
-                System.out.println("用户："+username+"退出登入");
-                break;
-            }
-        }
-    }*/
-
-
-    // 处理登录请求
-   /* private void handleLogin(PrintWriter out, String[] requestParts) {
-        // 检查请求是否包含正确数量的参数
-        if (requestParts.length != 3) {
-            out.println("error");
-            return;
-        }
-
-        String username = requestParts[1];
-        String password = requestParts[2];
-
-        // 如果用户名和密码匹配，返回"success"，否则返回"fail"
-        if (dbConnection.checkLogin(username, password)) {
-            out.println("success");
-            System.out.println("登入成功  密码是："+password);
-        } else {
-            out.println("fail");
-            System.out.println("密码错误："+password);
-        }
-    }*/
-
 
     private void handleGetRequestList(PrintWriter out, String username) {
         System.out.println("用户的信息列表：" + username);
@@ -695,38 +757,6 @@ public class ServerHandler implements Runnable {
         }
     }
 
-   /* //处理添加好友
-    private void handleAddFriend(PrintWriter out, String[] requestParts) {
-        if (requestParts.length != 2) {
-            out.println("error:invalid request format"); // 如果请求格式不正确，则返回错误信息
-            return;
-        }
-        Gson gson = new Gson(); // 创建Gson对象，用于反序列化JSON字符串
-        Map<String, String> userInfo;
-        try {
-            userInfo = gson.fromJson(requestParts[1], new TypeToken<Map<String, String>>(){}.getType()); // 将JSON字符串反序列化为Map类型的对象
-            System.out.println("反序列化后: "+userInfo);
-        } catch (JsonSyntaxException e) {
-            out.println("error:invalid json"); // 如果JSON字符串格式不正确，则返回错误信息
-            return;
-        }
-        // 从JSON对象中获取用户名
-        String username1 = userInfo.get("username1");
-        System.out.println("用户1："+username1);
-        String username2 = userInfo.get("username2");
-        System.out.println("用户2："+username2);
-        if (username1 == null || username2 == null) {
-            out.println("error:missing username");
-            return;
-        }
-        // 向数据库添加新的好友关系
-        boolean isSuccess = dbConnection.addFriend(username1, username2);
-        if (isSuccess) {
-            out.println("success");
-        } else {
-            out.println("error:failed to add friend");
-        }
-    }*/
 
     //处理修改密码
     private void handleChangePassword(PrintWriter out, String[] requestParts) {
@@ -947,39 +977,7 @@ public class ServerHandler implements Runnable {
 
 
 }
-/*
-ava 网络编程：使用Socket类与客户端进行通信。socket.getOutputStream()和socket.getInputStream()分别用于获取套接字的输出和输入流，以实现与客户端的读写操作。
-多线程编程：实现Runnable接口并在run()方法中处理客户端请求。每个ServerHandler实例都在新线程中运行，实现了服务器的并发处理能力。
-异常处理：使用try-catch语句处理可能出现的IOException。IOException可能在获取套接字的输入/输出流或读写数据时抛出。
-try-with-resources语句：自动关闭实现了AutoCloseable接口的资源，如PrintWriter和BufferedReader。当try语句
- */
 
-
-    /*
-    String[] requestParts = request.split(":"); 这行代码将客户端发来的请求字符串根据冒号 (:) 进行分割，并将结果存储在一个字符串数组 requestParts 中。
-    split 方法是 Java 中 String 类的一个方法，它使用给定的分隔符（在这里是冒号）将原始字符串分割成多个子字符串。
-例如，如果客户端发送的请求是 "login:user123:password456"，那么 request.split(":") 将返回一个包含三个元素的字符串数组：{"login", "user123", "password456"}。
-requestParts.length != 3 这个条件检查字符串数组 requestParts 的长度是否不等于 3。这是为了确保客户端发送的请求包含正确数量的参数。在这个示例中，一个有效的请求应包含三部分：操作类型（例如 "login" 或 "register"）、用户名和密码。
-如果 requestParts 数组的长度不等于 3，那么请求就被认为是无效的，需要向客户端返回一个 "error" 响应。
-换句话说，requestParts.length != 3 这个条件用于检查客户端请求是否包含三个由冒号分隔的部分，以确保请求是有效的。如果请求无效，代码将返回一个 "error" 响应并终止当前处理方法。
-     */
-
-
-
-/*
-使用Runnable接口的主要原因是为了实现多线程编程。Runnable接口是Java提供的一种简单的方式来创建一个可以在新线程中执行的任务。它有以下优势：
-
-并发处理：通过实现Runnable接口，可以让服务器同时处理多个客户端请求。这对于服务器应用程序尤其重要，因为服务器通常需要能够同时处理多个连接，以便为多个客户端提供服务。使用多线程可以提高服务器的吞吐量和响应能力。
-
-资源共享：多个线程可以共享同一个进程内的资源（如内存、文件等），从而降低系统资源开销。这有助于实现更高效的资源利用和程序性能。
-
-解耦：Runnable接口将任务的逻辑与线程管理分离。这意味着你可以专注于编写任务的具体逻辑，而不必担心线程的创建和管理。当需要修改任务逻辑时，你只需要修改实现Runnable接口的类，而不需要对线程管理代码进行任何更改。
-
-代码复用：通过实现Runnable接口，你可以在不同的线程中重用相同的任务代码。这有助于减少代码冗余，提高代码的可维护性。
-
-总之，使用Runnable接口可以帮助你实现并发处理，提高资源利用率，增强代码的可维护性和灵活性。在服务器应用程序中，这些优势尤为重要，因为它们可以提高服务器的性能和可扩展性。
-
- */
 
 
 
