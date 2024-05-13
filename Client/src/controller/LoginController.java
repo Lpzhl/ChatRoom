@@ -186,7 +186,6 @@ public class LoginController {
                 saveLoginCredentials(currentUser, "");
             }
 
-
             // 建立长连接
             ConnectionManager connectionManager = ConnectionManager.getInstance();
             connectionManager.connect(username);
@@ -314,10 +313,10 @@ public class LoginController {
             FileOutputStream fos = new FileOutputStream(LOGIN_FILE);//用于写入二进制数据到文件中
             // 将登录信息从Properties对象存储到文件输出流中    我们将其设置为 null，表示不需要注释信息。
             loginCredentials.store(fos, null);
-            // 关闭文件输出流   store() 方法会自动将输出流进行刷新，并且不会关闭该输出流对象。因此，我们需要在使用完输出流对象后手动关闭它，以释放系统资源
+            // 关闭文件输出流
             fos.close();
         } catch (Exception e) {
-            // 如果在保存登录信息过程中出现异常，打印堆栈跟踪信息
+
             e.printStackTrace();
         }
     }
@@ -449,7 +448,7 @@ public class LoginController {
     // 当用户点击记住密码复选框时触发
     @FXML
     public void Rememberpassword1() {
-        // 在这里实现记住密码的逻辑
+        // 实现记住密码的逻辑
         System.out.println("记住密码被点击");
     }
 }

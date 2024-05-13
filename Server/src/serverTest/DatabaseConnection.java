@@ -15,12 +15,12 @@ import java.util.List;
 
 public class DatabaseConnection {
 
-    // 定义数据库连接的URL、用户名和密码
+
     private static final String DB_URL = "jdbc:mysql://localhost:3306/chatroom?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
     private static final String DB_USER = "root";
     private static final String DB_PASSWORD = "123456";
 
-    // 构造方法，加载MySQL数据库驱动
+
     public DatabaseConnection() {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
@@ -223,7 +223,7 @@ public class DatabaseConnection {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        // 如果没有查询到数据或查询过程中出现异常，表示用户不是群组的成员
+
         return false;
     }
 
@@ -891,6 +891,10 @@ public class DatabaseConnection {
                 e.printStackTrace();
             }
         }
+
+
+
+        
     }
 
 

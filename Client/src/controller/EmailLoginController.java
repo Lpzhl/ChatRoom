@@ -122,12 +122,12 @@ public class EmailLoginController {
         System.out.println("verificationCode: " + verificationCode);
 
         if (email.isEmpty() || verificationCode.isEmpty()) {
-            System.out.println("Empty fields");
+            System.out.println("所有字段都不能为空");
             showAlert(Alert.AlertType.ERROR, "错误", "所有字段都不能为空");
             return;
         }
         if (!EmailUtil.isValidEmail(email)) {
-            System.out.println("Invalid email");
+            System.out.println("无效的QQ邮箱");
             showAlert(Alert.AlertType.ERROR, "错误", "无效的QQ邮箱");
             return;
         }

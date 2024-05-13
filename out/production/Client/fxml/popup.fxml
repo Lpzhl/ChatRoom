@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.image.*?>
+<?import javafx.scene.text.*?>
+<?import java.lang.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane prefHeight="174.0" prefWidth="256.0" style="-fx-background-color: lightblue;" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.PopupController">
+   <children>
+       <Button fx:id="addFriendButton" layoutX="80.0" layoutY="1.0" onAction="#addFriend" prefHeight="82.0" prefWidth="158.0" style="-fx-background-color: transparent;" text="添加好友/群" textFill="#18171b">
+         <font>
+            <Font size="22.0" />
+         </font></Button>
+       <Button fx:id="joinGroupChatButton" layoutX="80.0" layoutY="83.0" onAction="#joinGroupChat" prefHeight="74.0" prefWidth="158.0" style="-fx-background-color: transparent;" text="创建群聊" textFill="#18171bbf">
+         <font>
+            <Font size="26.0" />
+         </font></Button>
+         <ImageView fitHeight="58.0" fitWidth="57.0" layoutX="14.0" layoutY="13.0" pickOnBounds="true" preserveRatio="true">
+            <image>
+               <Image url="@../image/添加好友.png" />
+            </image>
+      </ImageView>
+         <ImageView fitHeight="58.0" fitWidth="57.0" layoutX="21.0" layoutY="96.0" pickOnBounds="true" preserveRatio="true">
+            <image>
+               <Image url="@../image/添加群组.png" />
+            </image>
+         </ImageView>
+   </children>
+</AnchorPane>

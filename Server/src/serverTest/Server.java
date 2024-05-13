@@ -19,7 +19,11 @@ public class Server { // 定义一个名为Server的公共类
                     ServerHandler serverHandler = new ServerHandler(clientSocket); // 创建一个ServerHandler对象，传入客户端Socket作为参数
                     Thread thread = new Thread(serverHandler); // 使用ServerHandler对象创建一个新线程
                     thread.start(); // 启动线程，处理客户端连接
-                    System.out.println("客户端已连接"); // 打印客户端连接成功的信息
+                    System.out.println("客户端已连接"); // 打
+
+
+
+                    // 印客户端连接成功的信息
                 } catch (IOException e) {
                     e.printStackTrace(); // 当捕获到IOException时，打印异常堆栈信息
                 }

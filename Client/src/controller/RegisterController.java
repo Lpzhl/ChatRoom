@@ -308,7 +308,8 @@ public class RegisterController {
 
     //验证用户名是否正确
     private boolean isValidUserName(String username){
-        return username.matches("^[\u4e00-\u9fa5\\d]{3,18}$");
+        //return username.matches("^[\u4e00-\u9fa5\\d]{3,18}$");
+        return true;
     }
 
     //判断密码是否合格

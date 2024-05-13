@@ -38,9 +38,9 @@ public class ServerHandler implements Runnable {
 
 
         if (socket.isClosed()) {
-            System.out.println("Socket is closed before entering ServerHandler");
+            System.out.println("进入Server Handler之前，套接字已关闭");
         } else {
-            System.out.println("Socket is open before entering ServerHandler");
+            System.out.println("进入Server Handler之前，套接字已打开");
         }
         PrintWriter out = null;
         BufferedReader in = null;
@@ -590,7 +590,6 @@ public class ServerHandler implements Runnable {
         boolean loginSuccess = dbConnection.checkLogin(username, password);
 
         if (loginSuccess) {
-
             // 判断该用户是否已经在线
             String status = dbConnection.getUserStatus(username);
             if (status.equals("online")) {

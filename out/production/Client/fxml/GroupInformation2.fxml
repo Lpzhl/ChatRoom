@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.text.*?>
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane prefHeight="590.0" prefWidth="623.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.GroupInformation2">
+    <children>
+        <Button fx:id="Member" layoutX="220.0" layoutY="27.0" mnemonicParsing="false" onAction="#Member1" prefHeight="36.0" prefWidth="135.0" text="成员">
+            <font>
+                <Font size="32.0" />
+            </font>
+        </Button>
+        <Button fx:id="HomePage" layoutX="53.0" layoutY="27.0" mnemonicParsing="false" onAction="#HomePage1" prefHeight="36.0" prefWidth="135.0" text="首页">
+            <font>
+                <Font size="32.0" />
+            </font>
+        </Button>
+        <Label layoutX="31.0" layoutY="138.0" prefHeight="70.0" prefWidth="124.0" text="群号码：">
+            <font>
+                <Font size="31.0" />
+            </font>
+        </Label>
+        <Label layoutX="31.0" layoutY="218.0" prefHeight="70.0" prefWidth="124.0" text="群昵称：">
+            <font>
+                <Font size="31.0" />
+            </font>
+        </Label>
+        <Label layoutX="31.0" layoutY="363.0" prefHeight="70.0" prefWidth="124.0" text="群介绍：">
+            <font>
+                <Font size="31.0" />
+            </font>
+        </Label>
+        <Label fx:id="number" layoutX="155.0" layoutY="138.0" prefHeight="70.0" prefWidth="338.0">
+            <font>
+                <Font size="31.0" />
+            </font>
+        </Label>
+        <Label fx:id="nickname" layoutX="165.0" layoutY="218.0" prefHeight="70.0" prefWidth="338.0">
+            <font>
+                <Font size="31.0" />
+            </font>
+        </Label>
+        <Label fx:id="GroupInformation" layoutX="155.0" layoutY="355.0" prefHeight="114.0" prefWidth="444.0">
+            <font>
+                <Font size="31.0" />
+            </font>
+        </Label>
+        <Label layoutX="31.0" layoutY="295.0" prefHeight="70.0" prefWidth="156.0" text="创建时间：">
+            <font>
+                <Font size="31.0" />
+            </font>
+        </Label>
+        <Label fx:id="CreationTime" layoutX="186.0" layoutY="302.0" prefHeight="70.0" prefWidth="338.0">
+            <font>
+                <Font size="31.0" />
+            </font>
+        </Label>
+        <ListView fx:id="people" layoutY="112.0" prefHeight="473.0" prefWidth="623.0" visible="false" />
+      <Button fx:id="editProfileButton" layoutX="133.0" layoutY="501.0" mnemonicParsing="false" onAction="#editProfileButton1" prefHeight="53.0" prefWidth="124.0" text="编辑" />
+      <Button fx:id="cancel" layoutX="334.0" layoutY="501.0" mnemonicParsing="false" onAction="#cancel1" prefHeight="53.0" prefWidth="135.0" text="取消" />
+    </children>
+</AnchorPane>

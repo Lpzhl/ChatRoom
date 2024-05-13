@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.image.*?>
+<?import javafx.scene.text.*?>
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane prefHeight="630.0" prefWidth="615.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.GroupInformation1">
+    <children>
+        <Button fx:id="Member" layoutX="224.0" layoutY="14.0" mnemonicParsing="false" onAction="#Member1" prefHeight="36.0" prefWidth="135.0" text="成员">
+            <font>
+                <Font size="32.0" />
+            </font>
+        </Button>
+        <Button fx:id="HomePage" layoutX="57.0" layoutY="14.0" mnemonicParsing="false" onAction="#HomePage1" prefHeight="36.0" prefWidth="135.0" text="首页">
+            <font>
+                <Font size="32.0" />
+            </font>
+        </Button>
+        <Label layoutX="31.0" layoutY="265.0" prefHeight="70.0" prefWidth="124.0" text="群昵称：">
+            <font>
+                <Font size="31.0" />
+            </font>
+        </Label>
+        <Label layoutX="31.0" layoutY="370.0" prefHeight="70.0" prefWidth="124.0" text="群介绍：">
+            <font>
+                <Font size="31.0" />
+            </font>
+        </Label>
+      <TextField fx:id="nickname" layoutX="149.0" layoutY="275.0" prefHeight="50.0" prefWidth="298.0" promptText="请输入你的新昵称" />
+      <TextArea fx:id="Introduce" layoutX="149.0" layoutY="376.0" prefHeight="57.0" prefWidth="434.0" />
+      <Button fx:id="Sure" layoutX="109.0" layoutY="497.0" mnemonicParsing="false" onAction="#Sure1" prefHeight="36.0" prefWidth="135.0" text="保存">
+         <font>
+            <Font size="32.0" />
+         </font>
+      </Button>
+      <Button fx:id="cancel" layoutX="327.0" layoutY="497.0" mnemonicParsing="false" onAction="#cancel1" prefHeight="64.0" prefWidth="150.0" text="取消">
+         <font>
+            <Font size="32.0" />
+         </font>
+      </Button>
+      <ImageView fx:id="avatar" fitHeight="173.0" fitWidth="206.0" layoutX="209.0" layoutY="91.0" onMouseClicked="#avatarClicked" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../image/默认头像.png" />
+         </image></ImageView>
+        <ListView fx:id="people" layoutY="112.0" prefHeight="473.0" prefWidth="623.0" visible="false" />
+    </children>
+</AnchorPane>

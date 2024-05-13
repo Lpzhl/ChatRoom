@@ -962,7 +962,7 @@ public class ChatRoomController implements Util.ConnectionManager.MessageListene
                         String messageType = messageObject.get("content_type").getAsString();
                         //String message = messageObject.get("content").getAsString();
                         System.out.println("文件类型是："+messageType);
-                        System.out.println("发送的文本"+message);
+                        System.out.println("发送的文本"+messageObject);
                         addMessageToChatRecord(currentUser, messageText, true, currentTime, messageType);
                         messageInput.clear();
                         // 清空AtomicReference
